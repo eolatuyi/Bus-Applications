@@ -6,15 +6,23 @@
 
 LCD1602::LCD1602(int rs, int e, int d4, int d5, int d6, int d7, const char* chip_name)
     : chip_(nullptr), rs_(nullptr), e_(nullptr), d4_(nullptr), d5_(nullptr), d6_(nullptr), d7_(nullptr) {
-    chip_ = gpiod_chip_open_by_name(chip_name);
+    chip_ = gpiod_chip_open(chip_name);
     if (!chip_) throw std::runtime_error("Failed to open GPIO chip");
 
     auto request_out = [&](int gpio, const char* name){
-        auto line = gpiod_chip_get_line(chip_, gpio);
+        auto line = gpiod_chip_get_line_by_offset(chip_, gpio);
         if (!line) throw std::runtime_error(std::string("Get line failed: ") + name);
-        if (gpiod_line_request_output(line, name, 0) < 0)
-            throw std::runtime_error(std::string("Request output failed: ") + name);
-        return line;
+        
+        struct gpiod_request_config* req_cfg = gpiod_request_config_new();
+        if (!req_cfg) throw std::runtime_error("Failed to create request config");
+        
+        gpiod_request_config_set_consumer(req_cfg, name);
+        
+        struct gpiod_line_request* request = gpiod_chip_request_lines(chip_, req_cfg, &line, 1);
+        gpiod_request_config_free(req_cfg);
+        
+        if (!request) throw std::runtime_error(std::string("Request output failed: ") + name);
+        return request;
     };
 
     rs_ = request_out(rs, "LCD_RS");
@@ -26,8 +34,12 @@ LCD1602::LCD1602(int rs, int e, int d4, int d5, int d6, int d7, const char* chip
 }
 
 LCD1602::~LCD1602() {
-    auto release = [&](gpiod_line* l){ if (l) gpiod_line_release(l); };
-    release(rs_); release(e_); release(d4_); release(d5_); release(d6_); release(d7_);
+    if (rs_) gpiod_line_request_release(rs_);
+    if (e_) gpiod_line_request_release(e_);
+    if (d4_) gpiod_line_request_release(d4_);
+    if (d5_) gpiod_line_request_release(d5_);
+    if (d6_) gpiod_line_request_release(d6_);
+    if (d7_) gpiod_line_request_release(d7_);
     if (chip_) gpiod_chip_close(chip_);
 }
 
@@ -36,18 +48,18 @@ void LCD1602::delay_us(unsigned int us) {
 }
 
 void LCD1602::pulseEnable() {
-    gpiod_line_set_value(e_, 1);
+    gpiod_line_request_set_value(e_, 0, 1);
     delay_us(2);
-    gpiod_line_set_value(e_, 0);
+    gpiod_line_request_set_value(e_, 0, 0);
     delay_us(50);
 }
 
 void LCD1602::write4(uint8_t nibble, bool rs) {
-    gpiod_line_set_value(rs_, rs ? 1 : 0);
-    gpiod_line_set_value(d4_, (nibble >> 0) & 0x1);
-    gpiod_line_set_value(d5_, (nibble >> 1) & 0x1);
-    gpiod_line_set_value(d6_, (nibble >> 2) & 0x1);
-    gpiod_line_set_value(d7_, (nibble >> 3) & 0x1);
+    gpiod_line_request_set_value(rs_, 0, rs ? 1 : 0);
+    gpiod_line_request_set_value(d4_, 0, (nibble >> 0) & 0x1);
+    gpiod_line_request_set_value(d5_, 0, (nibble >> 1) & 0x1);
+    gpiod_line_request_set_value(d6_, 0, (nibble >> 2) & 0x1);
+    gpiod_line_request_set_value(d7_, 0, (nibble >> 3) & 0x1);
     pulseEnable();
 }
 

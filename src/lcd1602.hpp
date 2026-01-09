@@ -16,12 +16,12 @@ public:
 
 private:
     struct gpiod_chip* chip_;
-    struct gpiod_line* rs_;
-    struct gpiod_line* e_;
-    struct gpiod_line* d4_;
-    struct gpiod_line* d5_;
-    struct gpiod_line* d6_;
-    struct gpiod_line* d7_;
+    struct gpiod_line_request* rs_;
+    struct gpiod_line_request* e_;
+    struct gpiod_line_request* d4_;
+    struct gpiod_line_request* d5_;
+    struct gpiod_line_request* d6_;
+    struct gpiod_line_request* d7_;
 
     void pulseEnable();
     void write4(uint8_t nibble, bool rs);
