@@ -10,15 +10,13 @@ LCD1602::LCD1602(int rs, int e, int d4, int d5, int d6, int d7, const char* chip
     if (!chip_) throw std::runtime_error("Failed to open GPIO chip");
 
     auto request_out = [&](int gpio, const char* name){
-        auto line = gpiod_chip_get_line_by_offset(chip_, gpio);
-        if (!line) throw std::runtime_error(std::string("Get line failed: ") + name);
-        
         struct gpiod_request_config* req_cfg = gpiod_request_config_new();
         if (!req_cfg) throw std::runtime_error("Failed to create request config");
         
         gpiod_request_config_set_consumer(req_cfg, name);
+        gpiod_request_config_add_line_by_offset(req_cfg, gpio);
         
-        struct gpiod_line_request* request = gpiod_chip_request_lines(chip_, req_cfg, &line, 1);
+        struct gpiod_line_request* request = gpiod_chip_request_lines(chip_, req_cfg);
         gpiod_request_config_free(req_cfg);
         
         if (!request) throw std::runtime_error(std::string("Request output failed: ") + name);
@@ -48,18 +46,18 @@ void LCD1602::delay_us(unsigned int us) {
 }
 
 void LCD1602::pulseEnable() {
-    gpiod_line_request_set_value(e_, 0, 1);
+    gpiod_line_request_set_value(e_, 0, GPIOD_LINE_VALUE_ACTIVE);
     delay_us(2);
-    gpiod_line_request_set_value(e_, 0, 0);
+    gpiod_line_request_set_value(e_, 0, GPIOD_LINE_VALUE_INACTIVE);
     delay_us(50);
 }
 
 void LCD1602::write4(uint8_t nibble, bool rs) {
-    gpiod_line_request_set_value(rs_, 0, rs ? 1 : 0);
-    gpiod_line_request_set_value(d4_, 0, (nibble >> 0) & 0x1);
-    gpiod_line_request_set_value(d5_, 0, (nibble >> 1) & 0x1);
-    gpiod_line_request_set_value(d6_, 0, (nibble >> 2) & 0x1);
-    gpiod_line_request_set_value(d7_, 0, (nibble >> 3) & 0x1);
+    gpiod_line_request_set_value(rs_, 0, rs ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(d4_, 0, ((nibble >> 0) & 0x1) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(d5_, 0, ((nibble >> 1) & 0x1) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(d6_, 0, ((nibble >> 2) & 0x1) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+    gpiod_line_request_set_value(d7_, 0, ((nibble >> 3) & 0x1) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
     pulseEnable();
 }
 
