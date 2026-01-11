@@ -4,8 +4,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+extern "C" {
 #include <linux/i2c-dev.h>
 #include <i2c/smbus.h>
+}
 
 I2CDevice::I2CDevice(int bus, uint8_t addr) : fd_(-1), bus_(bus), addr_(addr) { openBus(); }
 I2CDevice::~I2CDevice() { if (fd_ >= 0) close(fd_); }
