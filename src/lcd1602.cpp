@@ -14,10 +14,23 @@ LCD1602::LCD1602(int rs, int e, int d4, int d5, int d6, int d7, const char* chip
         if (!req_cfg) throw std::runtime_error("Failed to create request config");
         
         gpiod_request_config_set_consumer(req_cfg, name);
-        gpiod_request_config_add_line_by_offset(req_cfg, gpio);
         
-        struct gpiod_line_request* request = gpiod_chip_request_lines(chip_, req_cfg);
+        struct gpiod_line_config * line_cfg = gpiod_line_config_new();
+        if (!line_cfg) { gpiod_request_config_free(req_cfg); throw std::runtime_error("Failed to create line config"); }
+
+        unsigned int offsets[1] = { static_cast<unsigned int>(gpio) };
+        struct gpiod_line_settings *line_settings = gpiod_line_settings_new();
+        if (!line_settings) { gpiod_line_config_free(line_cfg); gpiod_request_config_free(req_cfg); throw std::runtime_error("Failed to create line settings"); }
+
+        gpiod_line_settings_set_direction(line_settings, GPIOD_LINE_DIRECTION_OUTPUT);
+
+        int rc = gpiod_line_config_add_line_settings(line_cfg, offsets, 1, line_settings);
+        gpiod_line_settings_free(line_settings);
+        if (rc < 0) { gpiod_line_config_free(line_cfg); gpiod_request_config_free(req_cfg); throw std::runtime_error("Failed to add line settings"); }
+
+        struct gpiod_line_request* request = gpiod_chip_request_lines(chip_, req_cfg, line_cfg);
         gpiod_request_config_free(req_cfg);
+        gpiod_line_config_free(line_cfg);
         
         if (!request) throw std::runtime_error(std::string("Request output failed: ") + name);
         return request;
