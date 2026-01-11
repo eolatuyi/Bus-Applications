@@ -17,4 +17,9 @@ if (NOT GPIOD_LIB)
     message(FATAL_ERROR "libgpiod not found. Install libgpiod-dev")
 endif()
 
-target_link_libraries(app ${GPIOD_LIB})
+find_library(I2C_LIB i2c)
+if (NOT I2C_LIB)
+    message(FATAL_ERROR "libi2c not found. Install libi2c-dev (i2c-tools development library)")
+endif()
+
+target_link_libraries(app ${GPIOD_LIB} ${I2C_LIB})
