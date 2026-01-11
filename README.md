@@ -33,3 +33,11 @@ cmake ..
 make
 sudo ./app
 ```
+
+## Test milestones (current project status)
+
+- Initial build on Raspberry Pi Model B 2 SoC: **Completed** — an initial `app` binary builds on the target Pi (confirmed).
+- Test on target device (functional/system testing): **Not started** — recommend running the app on hardware and verifying I2C, SPI and GPIO peripherals.
+- Unit testing: **Not started** — may be bypassed if system testing is straightforward and covers required flows.
+- System testing / integration: **Planned** — exercise the full stack (MPU6050, PCF8591, 74HC595, LCD1602) and validate behavior under expected conditions.
+
