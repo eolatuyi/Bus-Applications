@@ -16,15 +16,29 @@
 
 ## Wiring Diagram
 
-Source: [`docs/HL-diagram.svg`](docs/HL-diagram.svg) (ADS7830 @ `0x4B`, MPU6050 @ `0x68`).
+![Hardware topology](docs/HL-diagram.svg)
 
-![Wiring Diagram](docs/HL-diagram.png)
+GitHub inline preview (Mermaid fallback when SVG does not embed):
 
-Regenerate PNG after editing the SVG:
+```mermaid
+flowchart TB
+  Pi["Raspberry Pi Model B<br/>3.3V · Linux userspace"]
 
-```bash
-rsvg-convert -h 520 docs/HL-diagram.svg -o docs/HL-diagram.png
+  subgraph Peripherals[" "]
+    direction LR
+    I2C["I2C /dev/i2c-1<br/>MPU6050 @ 0x68<br/>ADS7830 @ 0x4B · CH2"]
+    SPI["SPI /dev/spidev0.0<br/>74HC595<br/>LED bar GPIO10/11/8"]
+    GPIO["GPIO · libgpiod<br/>LCD1602 4-bit<br/>RS=17 E=27 D4-D7=22-25"]
+    UNO["Arduino UNO<br/>optional<br/>USB serial / UART"]
+  end
+
+  Pi --> I2C
+  Pi --> SPI
+  Pi --> GPIO
+  Pi --> UNO
 ```
+
+Open [`docs/HL-diagram.svg`](docs/HL-diagram.svg) directly for the editable diagram (IDE SVG preview).
 
 ## Software Setup
 

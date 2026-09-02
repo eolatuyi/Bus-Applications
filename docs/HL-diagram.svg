@@ -1,49 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" viewBox="0 0 960 480">
   <defs>
     <style>
       .title { font: bold 20px sans-serif; fill: #111; }
       .label { font: 14px sans-serif; fill: #111; }
       .small { font: 12px sans-serif; fill: #333; }
       .box { fill: #f7f7f7; stroke: #222; stroke-width: 2; }
-      .bus { fill: none; stroke: #444; stroke-width: 2; marker-end: url(#arrow); }
+      .inner { fill: #fff; stroke: #666; stroke-width: 1; }
+      .bus { fill: none; stroke: #444; stroke-width: 2; }
+      .spine { fill: none; stroke: #444; stroke-width: 2; }
     </style>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6 Z" fill="#444"/>
-    </marker>
   </defs>
 
-  <text x="480" y="30" text-anchor="middle" class="title">Multi-Bus Sensor Dashboard  Hardware Topology</text>
+  <text x="480" y="28" text-anchor="middle" class="title">Multi-Bus Sensor Dashboard - Hardware Topology</text>
 
-  <rect x="330" y="60" width="300" height="90" rx="8" class="box"/>
-  <text x="480" y="90" text-anchor="middle" class="label">Raspberry Pi Model B</text>
-  <text x="480" y="112" text-anchor="middle" class="small">3.3V logic · Linux userspace</text>
-  <text x="480" y="132" text-anchor="middle" class="small">I2C · SPI · GPIO · UART</text>
+  <rect x="280" y="48" width="400" height="72" rx="8" class="box"/>
+  <text x="480" y="76" text-anchor="middle" class="label">Raspberry Pi Model B</text>
+  <text x="480" y="96" text-anchor="middle" class="small">3.3V logic / Linux userspace / I2C + SPI + GPIO + UART</text>
 
-  <rect x="40" y="210" width="220" height="110" rx="8" class="box"/>
-  <text x="150" y="240" text-anchor="middle" class="label">I2C /dev/i2c-1</text>
-  <text x="150" y="262" text-anchor="middle" class="small">MPU6050 @ 0x68</text>
-  <text x="150" y="282" text-anchor="middle" class="small">ADS7830 @ 0x4B</text>
-  <text x="150" y="302" text-anchor="middle" class="small">pot on CH2 (Freenove)</text>
+  <line x1="120" y1="148" x2="840" y2="148" class="bus"/>
+  <line x1="480" y1="120" x2="480" y2="148" class="spine"/>
+  <line x1="120" y1="148" x2="120" y2="178" class="spine"/>
+  <line x1="360" y1="148" x2="360" y2="178" class="spine"/>
+  <line x1="600" y1="148" x2="600" y2="178" class="spine"/>
+  <line x1="840" y1="148" x2="840" y2="178" class="spine"/>
 
-  <rect x="370" y="210" width="220" height="90" rx="8" class="box"/>
-  <text x="480" y="240" text-anchor="middle" class="label">SPI /dev/spidev0.0</text>
-  <text x="480" y="262" text-anchor="middle" class="small">74HC595 shift register</text>
-  <text x="480" y="282" text-anchor="middle" class="small">’ LED bar (GPIO10/11/8)</text>
+  <rect x="20" y="178" width="200" height="118" rx="8" class="box"/>
+  <text x="120" y="202" text-anchor="middle" class="label">I2C /dev/i2c-1</text>
+  <rect x="36" y="214" width="168" height="34" rx="4" class="inner"/>
+  <text x="120" y="235" text-anchor="middle" class="small">MPU6050 @ 0x68</text>
+  <rect x="36" y="254" width="168" height="34" rx="4" class="inner"/>
+  <text x="120" y="275" text-anchor="middle" class="small">ADS7830 @ 0x4B - CH2</text>
 
-  <rect x="700" y="210" width="220" height="90" rx="8" class="box"/>
-  <text x="810" y="240" text-anchor="middle" class="label">GPIO (libgpiod)</text>
-  <text x="810" y="262" text-anchor="middle" class="small">LCD1602 4-bit HD44780</text>
-  <text x="810" y="282" text-anchor="middle" class="small">RS=17 E=27 D4-D7=22-25</text>
+  <rect x="260" y="178" width="200" height="118" rx="8" class="box"/>
+  <text x="360" y="202" text-anchor="middle" class="label">SPI /dev/spidev0.0</text>
+  <rect x="276" y="214" width="168" height="34" rx="4" class="inner"/>
+  <text x="360" y="235" text-anchor="middle" class="small">74HC595 shift register</text>
+  <line x1="360" y1="248" x2="360" y2="258" class="spine"/>
+  <rect x="276" y="258" width="168" height="30" rx="4" class="inner"/>
+  <text x="360" y="277" text-anchor="middle" class="small">LED bar - GPIO10/11/8</text>
 
-  <rect x="370" y="380" width="220" height="80" rx="8" class="box"/>
-  <text x="480" y="410" text-anchor="middle" class="label">Arduino UNO (optional)</text>
-  <text x="480" y="432" text-anchor="middle" class="small">USB serial / UART</text>
+  <rect x="500" y="178" width="200" height="118" rx="8" class="box"/>
+  <text x="600" y="202" text-anchor="middle" class="label">GPIO - libgpiod</text>
+  <rect x="516" y="214" width="168" height="68" rx="4" class="inner"/>
+  <text x="600" y="238" text-anchor="middle" class="small">LCD1602 4-bit HD44780</text>
+  <text x="600" y="258" text-anchor="middle" class="small">RS=17 E=27</text>
+  <text x="600" y="276" text-anchor="middle" class="small">D4-D7 = 22-25</text>
 
-  <line x1="150" y1="210" x2="400" y2="150" class="bus"/>
-  <line x1="480" y1="210" x2="480" y2="150" class="bus"/>
-  <line x1="810" y1="210" x2="560" y2="150" class="bus"/>
-  <line x1="480" y1="380" x2="480" y2="150" class="bus"/>
+  <rect x="740" y="178" width="200" height="118" rx="8" class="box"/>
+  <text x="840" y="202" text-anchor="middle" class="label">Arduino UNO</text>
+  <rect x="756" y="224" width="168" height="52" rx="4" class="inner"/>
+  <text x="840" y="248" text-anchor="middle" class="small">optional</text>
+  <text x="840" y="266" text-anchor="middle" class="small">USB serial / UART</text>
 
-  <text x="480" y="500" text-anchor="middle" class="small">Source: docs/HL-diagram.svg  export PNG with: rsvg-convert -h 520 docs/HL-diagram.svg -o docs/HL-diagram.png</text>
+  <text x="480" y="460" text-anchor="middle" class="small">Edit: docs/HL-diagram.svg</text>
 </svg>
