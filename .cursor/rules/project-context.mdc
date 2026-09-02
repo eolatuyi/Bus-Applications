@@ -41,12 +41,15 @@ concurrency.
   - LCD1602 bit-bangs HD44780 over GPIO with busy-wait microsecond delays
     (`delay_us`). That is required by the controller timing, not a missed
     low-power wait.
-  - No unit or HIL suite yet. README tracks this: target-device and
-    system tests are the next milestones; unit tests may be skipped if
-    system tests cover the flows.
+  - No HIL suite in CI yet. `scripts/hil_test.sh` on the Pi covers automated
+    smoke (I2C scan, app run); operator steps document pot, LED bar, and LCD.
+  - Unit tests: `ads7830_protocol_test`, `hc595_bar_test` via `ctest` on host/Pi.
+  - Main loop retries transient sensor errors (50 ms backoff) instead of exiting;
+    ADS7830 `readAnalog` retries up to 3 times (10 ms between attempts).
+  - Startup banner prints ADS7830 address/channel; warns if pot unchanged 5 s.
   - `I2CDevice::readRawByte()` returns the raw `i2c_smbus_read_byte`
     result (including negative errno-style failures). Callers must check;
-    `PCF8591::readAnalog` does, other callers must not assume success.
+    `ADS7830::readAnalog` does, other callers must not assume success.
   - Review reports are written under `reviews/` but are gitignored and
     must not be committed or pushed. The skill's "commit alongside the
     code" logging convention does not apply in this repo.

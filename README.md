@@ -1,12 +1,13 @@
 # Multi-Bus Sensor Dashboard (Raspberry Pi)
 
-**Buses covered:** I2C (MPU6050 + PCF8591), SPI (74HC595), GPIO (LCD1602 4-bit)
+**Buses covered:** I2C (MPU6050 + ADS7830), SPI (74HC595), GPIO (LCD1602 4-bit)
 
 ## Hardware Topology
 
 - **I2C** `/dev/i2c-1` (3.3V)
   - **MPU6050: Accelerometer/gyro/Temp** @ `0x68` (AD0=LOW - address wiring config)
-  - **PCF8591: Potentiometer** @ `0x48` (A0–A2=LOW - address wiring config)
+  - **ADS7830: Potentiometer (8-bit ADC)** @ `0x4B` (Freenove module; A0/A1 high, fixed address)
+    - Potentiometer input on **CH2** (Freenove projects board wiring)
 - **SPI: Output expander for LED array** `/dev/spidev0.0`
   - **74HC595**: SER=MOSI (GPIO10), SRCLK=SCLK (GPIO11), RCLK=CE0 (GPIO8)
 - **LCD1602 (parallel, 4-bit): LCD connection** via **GPIO** using **libgpiod**
@@ -15,7 +16,15 @@
 
 ## Wiring Diagram
 
+Source: [`docs/HL-diagram.svg`](docs/HL-diagram.svg) (ADS7830 @ `0x4B`, MPU6050 @ `0x68`).
+
 ![Wiring Diagram](docs/HL-diagram.png)
+
+Regenerate PNG after editing the SVG:
+
+```bash
+rsvg-convert -h 520 docs/HL-diagram.svg -o docs/HL-diagram.png
+```
 
 ## Software Setup
 
@@ -31,7 +40,17 @@ sudo apt install -y build-essential cmake git libi2c-dev i2c-tools libgpiod-dev
 mkdir build && cd build
 cmake ..
 make
-sudo ./app
+ctest --output-on-failure   # host-side unit tests (protocol + LED bar math)
+./app --no-lcd              # I2C + SPI only while LCD is unwired (no sudo if in i2c/spi groups)
+./app                       # full dashboard once LCD is wired (prefer without sudo if in gpio group)
+```
+
+### Hardware-in-the-loop (on the Pi)
+
+```bash
+chmod +x scripts/hil_test.sh
+./scripts/hil_test.sh                  # smoke: i2cdetect + 8 s app run
+STRICT_POT=1 ./scripts/hil_test.sh     # also fail if pot not moved during capture
 ```
 
 ## Cursor / review process
@@ -49,8 +68,12 @@ Open this directory as the Cursor workspace so those rules load.
 
 ## Test milestones (current project status)
 
-- Initial build on Raspberry Pi Model B 2 SoC: **Completed** — an initial `app` binary builds on the target Pi (confirmed).
-- Test on target device (functional/system testing): **Not started** — recommend running the app on hardware and verifying I2C, SPI and GPIO peripherals.
-- Unit testing: **Not started** — may be bypassed if system testing is straightforward and covers required flows.
-- System testing / integration: **Planned** — exercise the full stack (MPU6050, PCF8591, 74HC595, LCD1602) and validate behavior under expected conditions.
+- Initial build on Raspberry Pi Model B 2 SoC: **Completed** — `app` builds on target (confirmed).
+- Test on target device (functional/system testing): **In progress**
+  - **MPU6050** @ `0x68`: **Verified** — accel/gyro/temp readings sane on hardware (`--no-lcd` run).
+  - **ADS7830** @ `0x4B` (CH2 pot): **Partial** — driver reads without I2C errors; pot sweep and LED-bar response still to be confirmed by operator.
+  - **74HC595** / SPI LED bar: **Not verified** — no formal check that bar tracks pot value yet.
+  - **LCD1602** / GPIO: **Not started** — display not wired; use `./app --no-lcd` until GPIO lines are connected.
+- Unit testing: **In progress** — `ads7830_protocol_test` and `hc595_bar_test` run via `ctest`; ADS7830 I2C read path covered by HIL script.
+- System testing / integration: **Planned** — full stack (MPU6050 + ADS7830 + 74HC595 + LCD1602) once pot sweep and LCD wiring are complete.
 
