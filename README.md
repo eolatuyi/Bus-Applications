@@ -34,6 +34,19 @@ make
 sudo ./app
 ```
 
+## Cursor / review process
+
+This repo consumes skills from the personal `sdlc-skills` collection.
+
+- Review rule: `.cursor/rules/embedded-code-review.mdc` (adapter; canonical
+  source lives in `sdlc-skills`)
+- Repo defaults: `.cursor/rules/project-context.mdc`
+- Architecture: `docs/architecture.md`
+- Local reviews only: `reviews/<path-mirroring-source>/<YYYY-MM-DD>_<short-hash>.md`
+  (gitignored; do not commit or push)
+
+Open this directory as the Cursor workspace so those rules load.
+
 ## Test milestones (current project status)
 
 - Initial build on Raspberry Pi Model B 2 SoC: **Completed** — an initial `app` binary builds on the target Pi (confirmed).

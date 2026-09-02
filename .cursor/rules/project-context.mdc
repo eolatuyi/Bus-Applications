@@ -1,0 +1,56 @@
+---
+description: Repo-specific defaults (coding standard, architecture reference, criticality, known deviations) consumed by other skill-driven rules in this repo, e.g. embedded-code-review.mdc. Always loaded so those rules don't need repo context re-stated every session.
+alwaysApply: true
+---
+
+<!--
+  ADAPTER NOTE: This file is repo-specific — it is NOT generated from the
+  canonical skill source and should be hand-edited per repo/project. It
+  exists so that skill-driven rules (like embedded-code-review.mdc) get
+  consistent defaults without re-stating them in every Cursor session.
+
+  Resolution order any consuming rule should follow:
+  1. Anything explicitly stated in-chat for this session (highest precedence)
+  2. Values in this file (repo defaults)
+  3. The consuming skill's own built-in defaults
+  4. Conservative inference, explicitly flagged as such
+-->
+
+# Project Context — Bus-Applications
+
+Linux userspace C++17 dashboard on Raspberry Pi. Not bare-metal firmware and
+not an RTOS: a single-threaded polling loop talking to `/dev/i2c-*`,
+`/dev/spidev*`, and GPIO via libgpiod. Deep-dive checklists that assume
+ISR/task boundaries, watchdogs, or tickless idle apply only where this
+userspace process actually shares state or hardware — flag those as
+not-applicable rather than blocking, unless a change introduces real
+concurrency.
+
+- **coding_standard:** none — use skill defaults. Language is C++17;
+  errors on bus I/O are reported via exceptions (`std::runtime_error` /
+  `std::invalid_argument`). Keep bus wrappers (`I2CDevice`, `SPIDevice`)
+  free of device protocol; keep device drivers free of dashboard/UI logic.
+- **architecture_reference:** `docs/architecture.md`
+- **criticality:** non-critical (lab / learning dashboard; may downgrade
+  non-safety fault-posture findings to advisory per skill Decision Rules)
+- **known_deviations:**
+  - Single-threaded polling in `src/app.cpp`; no mutex/arbiter on I2C or
+    SPI. Each I2C driver opens its own `/dev/i2c-1` file descriptor.
+    Acceptable while there is one caller; a second thread or process on
+    the same bus is out of scope.
+  - LCD1602 bit-bangs HD44780 over GPIO with busy-wait microsecond delays
+    (`delay_us`). That is required by the controller timing, not a missed
+    low-power wait.
+  - No unit or HIL suite yet. README tracks this: target-device and
+    system tests are the next milestones; unit tests may be skipped if
+    system tests cover the flows.
+  - `I2CDevice::readRawByte()` returns the raw `i2c_smbus_read_byte`
+    result (including negative errno-style failures). Callers must check;
+    `PCF8591::readAnalog` does, other callers must not assume success.
+  - Review reports are written under `reviews/` but are gitignored and
+    must not be committed or pushed. The skill's "commit alongside the
+    code" logging convention does not apply in this repo.
+
+Update this file when the repo's standards change, or when a new deviation
+is approved. Do not let this file silently go stale — a wrong default here
+silently affects every review's severity judgments.
