@@ -16,7 +16,30 @@ constexpr auto kSensorRetryDelay = std::chrono::milliseconds(50);
 constexpr int kStalePotSamples = 25;  // 5 s at 200 ms — warn if pot never moves
 
 void printUsage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [--no-lcd]\n";
+    std::cerr << "Usage: " << prog << " [--no-lcd | --test-hc595]\n";
+}
+
+void runHc595BringUp(HC595& sr) {
+    std::cout << "74HC595 LED-bar bring-up on /dev/spidev0.0\n"
+              << "Watch Q0..Q7: walk, then bar fill. Ctrl-C to stop.\n";
+    while (true) {
+        for (int i = 0; i < 8; ++i) {
+            uint8_t bit = static_cast<uint8_t>(1u << i);
+            sr.writeByte(bit);
+            std::cout << "walk Q" << i << "  0x" << std::hex << static_cast<int>(bit)
+                      << std::dec << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+        for (int n = 0; n <= 8; ++n) {
+            uint8_t bar = (n == 0) ? 0 : static_cast<uint8_t>((1u << n) - 1);
+            sr.writeByte(bar);
+            std::cout << "bar " << n << "/8  0x" << std::hex << static_cast<int>(bar)
+                      << std::dec << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+        sr.writeByte(0x00);
+        std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    }
 }
 
 void printHardwareBanner() {
@@ -30,10 +53,13 @@ void printHardwareBanner() {
 
 int main(int argc, char* argv[]) {
     bool use_lcd = true;
+    bool test_hc595 = false;
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--no-lcd") == 0) {
             use_lcd = false;
+        } else if (std::strcmp(argv[i], "--test-hc595") == 0) {
+            test_hc595 = true;
         } else {
             printUsage(argv[0]);
             return 1;
@@ -41,6 +67,12 @@ int main(int argc, char* argv[]) {
     }
 
     try {
+        if (test_hc595) {
+            HC595 sr;
+            runHc595BringUp(sr);
+            return 0;
+        }
+
         MPU6050 imu(0x68);
         imu.init();
         ADS7830 adc;

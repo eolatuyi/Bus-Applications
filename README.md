@@ -9,12 +9,17 @@
   - **ADS7830: Potentiometer (8-bit ADC)** @ `0x4B` (Freenove module; A0/A1 high, fixed address)
     - Potentiometer input on **CH2** (Freenove projects board wiring)
 - **SPI: Output expander for LED array** `/dev/spidev0.0`
-  - **74HC595**: SER=MOSI (GPIO10), SRCLK=SCLK (GPIO11), RCLK=CE0 (GPIO8)
+  - **74HC595**: one 8-bit chip (not three). Datasheet “3-state” means Q0–Q7 can be High / Low / Hi-Z via `OE`; internally it is an 8-stage shift register plus an 8-bit latch.
+  - **SPI map**: SER=MOSI (GPIO10), SRCLK=SCLK (GPIO11), RCLK=CE0 (GPIO8)
+  - Tie **OE to GND** (outputs enabled) and **SRCLR / MR to 3.3V** (do not clear).
+  - SparkFun 10-segment bar: use 8 segments. **Anodes → Q0–Q7**, **cathodes → 220Ω → GND**. If resistors are on the ground side and nothing lights, rotate the bar 180°.
 - **LCD1602 (parallel, 4-bit): LCD connection** via **GPIO** using **libgpiod**
   - Default pin mapping (BCM): `RS=17`, `E=27`, `D4=22`, `D5=23`, `D6=24`, `D7=25`
   - RW → GND (write-only), VCC → 5V, GND → GND, VO → contrast pot (approx 0.3–0.6V)
 
-## Wiring Diagram
+## Wiring Diagram (as built)
+
+Not wired yet: LCD1602, Arduino UNO.
 
 ![Hardware topology](docs/HL-diagram.svg)
 
@@ -22,20 +27,22 @@ GitHub inline preview (Mermaid fallback when SVG does not embed):
 
 ```mermaid
 flowchart TB
-  Pi["Raspberry Pi Model B<br/>3.3V · Linux userspace"]
+  Pi["Raspberry Pi 3 Model B<br/>3.3V · /dev/i2c-1 · /dev/spidev0.0"]
 
-  subgraph Peripherals[" "]
-    direction LR
-    I2C["I2C /dev/i2c-1<br/>MPU6050 @ 0x68<br/>ADS7830 @ 0x4B · CH2"]
-    SPI["SPI /dev/spidev0.0<br/>74HC595<br/>LED bar GPIO10/11/8"]
-    GPIO["GPIO · libgpiod<br/>LCD1602 4-bit<br/>RS=17 E=27 D4-D7=22-25"]
-    UNO["Arduino UNO<br/>optional<br/>USB serial / UART"]
+  subgraph I2C["I2C  SDA=GPIO2  SCL=GPIO3"]
+    MPU["MPU6050 @ 0x68<br/>accel / gyro / temp"]
+    ADC["ADS7830 @ 0x4B<br/>pot on CH2"]
+  end
+
+  subgraph SPI["SPI0  MOSI=GPIO10  SCLK=GPIO11  CE0=GPIO8"]
+    SR["74HC595<br/>SER / SRCLK / RCLK<br/>OE=GND  SRCLR=3.3V"]
+    BAR["SparkFun 10-seg bar<br/>8 used: anodes = Q0-Q7"]
+    R["8 x 220 ohm<br/>cathodes to GND"]
+    SR --> BAR --> R
   end
 
   Pi --> I2C
   Pi --> SPI
-  Pi --> GPIO
-  Pi --> UNO
 ```
 
 Open [`docs/HL-diagram.svg`](docs/HL-diagram.svg) directly for the editable diagram (IDE SVG preview).
@@ -55,6 +62,7 @@ mkdir build && cd build
 cmake ..
 make
 ctest --output-on-failure   # host-side unit tests (protocol + LED bar math)
+./app --test-hc595          # SPI only: walk Q0-Q7 then fill LED bar (no I2C/LCD/pot)
 ./app --no-lcd              # I2C + SPI only while LCD is unwired (no sudo if in i2c/spi groups)
 ./app                       # full dashboard once LCD is wired (prefer without sudo if in gpio group)
 ```
@@ -86,7 +94,7 @@ Open this directory as the Cursor workspace so those rules load.
 - Test on target device (functional/system testing): **In progress**
   - **MPU6050** @ `0x68`: **Verified** — accel/gyro/temp readings sane on hardware (`--no-lcd` run).
   - **ADS7830** @ `0x4B` (CH2 pot): **Partial** — driver reads without I2C errors; pot sweep and LED-bar response still to be confirmed by operator.
-  - **74HC595** / SPI LED bar: **Not verified** — no formal check that bar tracks pot value yet.
+  - **74HC595** / SPI LED bar: **Verified** — `./app --test-hc595` walk + bar fill on SparkFun 10-seg (8 used); bar flipped so anodes face Q, cathodes through 220Ω to GND.
   - **LCD1602** / GPIO: **Not started** — display not wired; use `./app --no-lcd` until GPIO lines are connected.
 - Unit testing: **In progress** — `ads7830_protocol_test` and `hc595_bar_test` run via `ctest`; ADS7830 I2C read path covered by HIL script.
 - System testing / integration: **Planned** — full stack (MPU6050 + ADS7830 + 74HC595 + LCD1602) once pot sweep and LCD wiring are complete.

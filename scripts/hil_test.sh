@@ -34,6 +34,7 @@ grep -q "Pot=" "$log" || fail "no ADS7830 samples in log"
 pass "app ran ${RUN_SECS}s without fatal error"
 
 echo "=== Operator checks (manual) ==="
+echo "  0. LED bar first: $APP --test-hc595  (walk Q0-Q7, then bar fill; Ctrl-C)."
 echo "  1. Turn the pot fully CCW then CW — Pot= should span roughly 0–255."
 echo "  2. LED bar on 74HC595 should track Pot= monotonically."
 echo "  3. Tilt the MPU6050 — Accel[g] axes should change smoothly."

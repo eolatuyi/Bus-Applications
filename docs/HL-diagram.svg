@@ -1,57 +1,70 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" viewBox="0 0 960 480">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620">
   <defs>
     <style>
-      .title { font: bold 20px sans-serif; fill: #111; }
-      .label { font: 14px sans-serif; fill: #111; }
+      .title { font: bold 18px sans-serif; fill: #111; }
+      .label { font: 13px sans-serif; fill: #111; }
       .small { font: 12px sans-serif; fill: #333; }
+      .note { font: 12px sans-serif; fill: #555; }
       .box { fill: #f7f7f7; stroke: #222; stroke-width: 2; }
       .inner { fill: #fff; stroke: #666; stroke-width: 1; }
-      .bus { fill: none; stroke: #444; stroke-width: 2; }
-      .spine { fill: none; stroke: #444; stroke-width: 2; }
+      .line { fill: none; stroke: #444; stroke-width: 2; }
+      .muted { fill: #f7f7f7; stroke: #999; stroke-width: 1; stroke-dasharray: 6 4; }
+      .mutedt { font: 12px sans-serif; fill: #888; }
     </style>
   </defs>
 
-  <text x="480" y="28" text-anchor="middle" class="title">Multi-Bus Sensor Dashboard - Hardware Topology</text>
+  <text x="480" y="26" text-anchor="middle" class="title">As built - Raspberry Pi 3 Model B</text>
+  <text x="480" y="46" text-anchor="middle" class="note">LCD1602 and Arduino not wired yet</text>
 
-  <rect x="280" y="48" width="400" height="72" rx="8" class="box"/>
-  <text x="480" y="76" text-anchor="middle" class="label">Raspberry Pi Model B</text>
-  <text x="480" y="96" text-anchor="middle" class="small">3.3V logic / Linux userspace / I2C + SPI + GPIO + UART</text>
+  <rect x="280" y="60" width="400" height="70" rx="8" class="box"/>
+  <text x="480" y="88" text-anchor="middle" class="label">Raspberry Pi 3 Model B Rev 1.2</text>
+  <text x="480" y="110" text-anchor="middle" class="small">3.3V logic  /dev/i2c-1  /dev/spidev0.0</text>
 
-  <line x1="120" y1="148" x2="840" y2="148" class="bus"/>
-  <line x1="480" y1="120" x2="480" y2="148" class="spine"/>
-  <line x1="120" y1="148" x2="120" y2="178" class="spine"/>
-  <line x1="360" y1="148" x2="360" y2="178" class="spine"/>
-  <line x1="600" y1="148" x2="600" y2="178" class="spine"/>
-  <line x1="840" y1="148" x2="840" y2="178" class="spine"/>
+  <!-- split from Pi to I2C (left) and SPI (right) -->
+  <line x1="380" y1="130" x2="380" y2="168" class="line"/>
+  <line x1="580" y1="130" x2="580" y2="168" class="line"/>
 
-  <rect x="20" y="178" width="200" height="118" rx="8" class="box"/>
-  <text x="120" y="202" text-anchor="middle" class="label">I2C /dev/i2c-1</text>
-  <rect x="36" y="214" width="168" height="34" rx="4" class="inner"/>
-  <text x="120" y="235" text-anchor="middle" class="small">MPU6050 @ 0x68</text>
-  <rect x="36" y="254" width="168" height="34" rx="4" class="inner"/>
-  <text x="120" y="275" text-anchor="middle" class="small">ADS7830 @ 0x4B - CH2</text>
+  <!-- I2C column -->
+  <rect x="40" y="168" width="340" height="250" rx="8" class="box"/>
+  <text x="210" y="194" text-anchor="middle" class="label">I2C bus  /dev/i2c-1</text>
+  <text x="210" y="214" text-anchor="middle" class="small">SDA=GPIO2   SCL=GPIO3   3.3V / GND</text>
 
-  <rect x="260" y="178" width="200" height="118" rx="8" class="box"/>
-  <text x="360" y="202" text-anchor="middle" class="label">SPI /dev/spidev0.0</text>
-  <rect x="276" y="214" width="168" height="34" rx="4" class="inner"/>
-  <text x="360" y="235" text-anchor="middle" class="small">74HC595 shift register</text>
-  <line x1="360" y1="248" x2="360" y2="258" class="spine"/>
-  <rect x="276" y="258" width="168" height="30" rx="4" class="inner"/>
-  <text x="360" y="277" text-anchor="middle" class="small">LED bar - GPIO10/11/8</text>
+  <rect x="60" y="232" width="300" height="70" rx="4" class="inner"/>
+  <text x="210" y="258" text-anchor="middle" class="label">MPU6050</text>
+  <text x="210" y="280" text-anchor="middle" class="small">addr 0x68   accel / gyro / temp</text>
 
-  <rect x="500" y="178" width="200" height="118" rx="8" class="box"/>
-  <text x="600" y="202" text-anchor="middle" class="label">GPIO - libgpiod</text>
-  <rect x="516" y="214" width="168" height="68" rx="4" class="inner"/>
-  <text x="600" y="238" text-anchor="middle" class="small">LCD1602 4-bit HD44780</text>
-  <text x="600" y="258" text-anchor="middle" class="small">RS=17 E=27</text>
-  <text x="600" y="276" text-anchor="middle" class="small">D4-D7 = 22-25</text>
+  <rect x="60" y="318" width="300" height="80" rx="4" class="inner"/>
+  <text x="210" y="344" text-anchor="middle" class="label">ADS7830</text>
+  <text x="210" y="366" text-anchor="middle" class="small">addr 0x4B (A0/A1 high, fixed)</text>
+  <text x="210" y="384" text-anchor="middle" class="small">potentiometer on CH2</text>
 
-  <rect x="740" y="178" width="200" height="118" rx="8" class="box"/>
-  <text x="840" y="202" text-anchor="middle" class="label">Arduino UNO</text>
-  <rect x="756" y="224" width="168" height="52" rx="4" class="inner"/>
-  <text x="840" y="248" text-anchor="middle" class="small">optional</text>
-  <text x="840" y="266" text-anchor="middle" class="small">USB serial / UART</text>
+  <!-- SPI column -->
+  <rect x="420" y="168" width="500" height="410" rx="8" class="box"/>
+  <text x="670" y="194" text-anchor="middle" class="label">SPI  /dev/spidev0.0</text>
+  <text x="670" y="214" text-anchor="middle" class="small">MOSI=GPIO10  SCLK=GPIO11  CE0=GPIO8</text>
 
-  <text x="480" y="460" text-anchor="middle" class="small">Edit: docs/HL-diagram.svg</text>
+  <rect x="440" y="232" width="460" height="96" rx="4" class="inner"/>
+  <text x="670" y="256" text-anchor="middle" class="label">74HC595</text>
+  <text x="670" y="276" text-anchor="middle" class="small">SER&lt;-MOSI   SRCLK&lt;-SCLK   RCLK&lt;-CE0</text>
+  <text x="670" y="294" text-anchor="middle" class="small">OE=GND (enable)    SRCLR=3.3V (run)</text>
+  <text x="670" y="312" text-anchor="middle" class="small">Q0-Q7 source the LED anodes</text>
+
+  <line x1="670" y1="328" x2="670" y2="352" class="line"/>
+
+  <rect x="440" y="352" width="460" height="80" rx="4" class="inner"/>
+  <text x="670" y="376" text-anchor="middle" class="label">SparkFun 10-segment bar (8 used)</text>
+  <text x="670" y="396" text-anchor="middle" class="small">anodes &lt;- Q0-Q7</text>
+  <text x="670" y="414" text-anchor="middle" class="small">cathodes toward resistors (bar flipped)</text>
+
+  <line x1="670" y1="432" x2="670" y2="456" class="line"/>
+
+  <rect x="440" y="456" width="460" height="54" rx="4" class="inner"/>
+  <text x="670" y="478" text-anchor="middle" class="label">8 x 220 ohm</text>
+  <text x="670" y="496" text-anchor="middle" class="small">between bar cathodes and GND</text>
+
+  <line x1="670" y1="510" x2="670" y2="534" class="line"/>
+
+  <rect x="540" y="534" width="260" height="28" rx="4" class="inner"/>
+  <text x="670" y="553" text-anchor="middle" class="small">GND (common with Pi)</text>
 </svg>
