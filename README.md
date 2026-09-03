@@ -93,9 +93,9 @@ Open this directory as the Cursor workspace so those rules load.
 - Initial build on Raspberry Pi 3 Model B Rev 1.2: **Completed** — `app` builds on target (confirmed).
 - Test on target device (functional/system testing): **In progress**
   - **MPU6050** @ `0x68`: **Verified** — accel/gyro/temp readings sane on hardware (`--no-lcd` run).
-  - **ADS7830** @ `0x4B` (CH2 pot): **Partial** — driver reads without I2C errors; pot sweep and LED-bar response still to be confirmed by operator.
-  - **74HC595** / SPI LED bar: **Verified** — `./app --test-hc595` walk + bar fill on SparkFun 10-seg (8 used); bar flipped so anodes face Q, cathodes through 220Ω to GND.
+  - **ADS7830** @ `0x4B` (CH2 pot): **Verified** — `Pot=` tracks knob; HIL smoke + operator confirm.
+  - **74HC595** / SPI LED bar: **Verified** — walk/bar via `--test-hc595`; bar tracks pot under `./app --no-lcd`.
   - **LCD1602** / GPIO: **Not started** — display not wired; use `./app --no-lcd` until GPIO lines are connected.
-- Unit testing: **In progress** — `ads7830_protocol_test` and `hc595_bar_test` run via `ctest`; ADS7830 I2C read path covered by HIL script.
-- System testing / integration: **Planned** — full stack (MPU6050 + ADS7830 + 74HC595 + LCD1602) once pot sweep and LCD wiring are complete.
+- Unit testing: **In progress** — `ads7830_protocol_test` and `hc595_bar_test` via `ctest` (2/2 on Pi).
+- System testing / integration: **Partial** — MPU6050 + ADS7830 + 74HC595 + LED bar integrated without LCD; LCD still outstanding. Full HIL script PASS on Pi (`i2cdetect`, `--test-hc595`, `--no-lcd` smoke).
 
