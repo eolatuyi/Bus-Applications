@@ -46,7 +46,9 @@ concurrency.
   - Unit tests: `ads7830_protocol_test`, `hc595_bar_test` via `ctest` on host/Pi.
   - Main loop retries transient sensor errors (50 ms backoff) instead of exiting;
     ADS7830 `readAnalog` retries up to 3 times (10 ms between attempts).
-  - Startup banner prints ADS7830 address/channel; warns if pot unchanged 5 s.
+  - `--test-hc595` walks Q0–Q7 then fills a bar (no I2C/LCD); mutually exclusive
+    with `--no-lcd`. Bring-up patterns live in `hc595_bar.hpp` (`hc595WalkBit`,
+    `hc595BarFill`) and are unit-tested.
   - `I2CDevice::readRawByte()` returns the raw `i2c_smbus_read_byte`
     result (including negative errno-style failures). Callers must check;
     `ADS7830::readAnalog` does, other callers must not assume success.

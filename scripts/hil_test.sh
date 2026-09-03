@@ -24,6 +24,13 @@ echo "$scan" | grep -qE '\b4b\b' || fail "ADS7830 not seen at 0x4b"
 echo "$scan" | grep -qE '\b68\b' || fail "MPU6050 not seen at 0x68"
 pass "I2C addresses 0x4b and 0x68 present"
 
+echo "=== HC595 SPI bring-up smoke ==="
+spi_log=$(mktemp)
+timeout 3 "$APP" --test-hc595 >"$spi_log" 2>&1 || [[ $? -eq 124 ]] || fail "--test-hc595 exited early"
+grep -q "walk Q0" "$spi_log" || fail "no walk Q0 in --test-hc595 output"
+pass "--test-hc595 produced walk pattern (visual check is still operator)"
+rm -f "$spi_log"
+
 echo "=== App smoke (MPU6050 + ADS7830 + SPI, no LCD) ==="
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT

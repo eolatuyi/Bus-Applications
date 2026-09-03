@@ -90,7 +90,7 @@ Open this directory as the Cursor workspace so those rules load.
 
 ## Test milestones (current project status)
 
-- Initial build on Raspberry Pi Model B 2 SoC: **Completed** — `app` builds on target (confirmed).
+- Initial build on Raspberry Pi 3 Model B Rev 1.2: **Completed** — `app` builds on target (confirmed).
 - Test on target device (functional/system testing): **In progress**
   - **MPU6050** @ `0x68`: **Verified** — accel/gyro/temp readings sane on hardware (`--no-lcd` run).
   - **ADS7830** @ `0x4B` (CH2 pot): **Partial** — driver reads without I2C errors; pot sweep and LED-bar response still to be confirmed by operator.

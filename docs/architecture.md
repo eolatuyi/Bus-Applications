@@ -29,8 +29,9 @@ That is the documented exception: parallel LCD is not on I2C/SPI.
 
 ## Runtime model
 
-- One thread. Init throws on open/config failure; the main loop has no
-  retry/backoff beyond process exit.
+- One thread. Init throws on open/config failure. The dashboard poll loop
+  and `--test-hc595` bring-up retry transient bus errors (50 ms) rather than
+  exiting; `--no-lcd` and `--test-hc595` are mutually exclusive.
 - Hardware topology and addresses: `README.md`.
 - Reviews of C/C++ changes follow the `embedded-code-review` Cursor rule
   and may be written under `reviews/` locally; that directory is

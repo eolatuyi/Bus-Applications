@@ -8,6 +8,7 @@
 #include "mpu6050.hpp"
 #include "ads7830.hpp"
 #include "hc595.hpp"
+#include "hc595_bar.hpp"
 #include "lcd1602.hpp"
 
 namespace {
@@ -23,22 +24,27 @@ void runHc595BringUp(HC595& sr) {
     std::cout << "74HC595 LED-bar bring-up on /dev/spidev0.0\n"
               << "Watch Q0..Q7: walk, then bar fill. Ctrl-C to stop.\n";
     while (true) {
-        for (int i = 0; i < 8; ++i) {
-            uint8_t bit = static_cast<uint8_t>(1u << i);
-            sr.writeByte(bit);
-            std::cout << "walk Q" << i << "  0x" << std::hex << static_cast<int>(bit)
-                      << std::dec << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        try {
+            for (int i = 0; i < 8; ++i) {
+                uint8_t bit = hc595WalkBit(i);
+                sr.writeByte(bit);
+                std::cout << "walk Q" << i << "  0x" << std::hex << static_cast<int>(bit)
+                          << std::dec << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            }
+            for (int n = 0; n <= 8; ++n) {
+                uint8_t bar = hc595BarFill(n);
+                sr.writeByte(bar);
+                std::cout << "bar " << n << "/8  0x" << std::hex << static_cast<int>(bar)
+                          << std::dec << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            }
+            sr.writeByte(0x00);
+            std::this_thread::sleep_for(std::chrono::milliseconds(400));
+        } catch (const std::exception& ex) {
+            std::cerr << "SPI error (retrying): " << ex.what() << std::endl;
+            std::this_thread::sleep_for(kSensorRetryDelay);
         }
-        for (int n = 0; n <= 8; ++n) {
-            uint8_t bar = (n == 0) ? 0 : static_cast<uint8_t>((1u << n) - 1);
-            sr.writeByte(bar);
-            std::cout << "bar " << n << "/8  0x" << std::hex << static_cast<int>(bar)
-                      << std::dec << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
-        }
-        sr.writeByte(0x00);
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
     }
 }
 
@@ -64,6 +70,11 @@ int main(int argc, char* argv[]) {
             printUsage(argv[0]);
             return 1;
         }
+    }
+
+    if (test_hc595 && !use_lcd) {
+        printUsage(argv[0]);
+        return 1;
     }
 
     try {
