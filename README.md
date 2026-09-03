@@ -23,29 +23,30 @@ Not wired yet: LCD1602, Arduino UNO.
 
 ![Hardware topology](docs/HL-diagram.svg)
 
-GitHub inline preview (Mermaid fallback when SVG does not embed):
+GitHub inline preview (Mermaid):
 
 ```mermaid
 flowchart TB
-  Pi["Raspberry Pi 3 Model B<br/>3.3V · /dev/i2c-1 · /dev/spidev0.0"]
+  Pi["Raspberry Pi 3 Model B"]
 
-  subgraph I2C["I2C  SDA=GPIO2  SCL=GPIO3"]
-    MPU["MPU6050 @ 0x68<br/>accel / gyro / temp"]
-    ADC["ADS7830 @ 0x4B<br/>pot on CH2"]
+  subgraph i2cBus ["I2C SDA GPIO2 SCL GPIO3"]
+    MPU["MPU6050 0x68"]
+    ADC["ADS7830 0x4B pot CH2"]
   end
 
-  subgraph SPI["SPI0  MOSI=GPIO10  SCLK=GPIO11  CE0=GPIO8"]
-    SR["74HC595<br/>SER / SRCLK / RCLK<br/>OE=GND  SRCLR=3.3V"]
-    BAR["SparkFun 10-seg bar<br/>8 used: anodes = Q0-Q7"]
-    R["8 x 220 ohm<br/>cathodes to GND"]
+  subgraph spiBus ["SPI0 MOSI10 SCLK11 CE0"]
+    SR["74HC595"]
+    BAR["SparkFun bar 8 of 10"]
+    R["220 ohm to GND"]
     SR --> BAR --> R
   end
 
-  Pi --> I2C
-  Pi --> SPI
+  Pi --> MPU
+  Pi --> ADC
+  Pi --> SR
 ```
 
-Open [`docs/HL-diagram.svg`](docs/HL-diagram.svg) directly for the editable diagram (IDE SVG preview).
+Editable SVG (IDE / browser): [`docs/HL-diagram.svg`](docs/HL-diagram.svg)
 
 ## Software Setup
 
