@@ -10,6 +10,8 @@ pass() { echo "PASS: $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 warn() { echo "WARN: $*"; }
 
+export PATH="/usr/sbin:/usr/bin:$PATH"
+
 echo "=== HIL preflight ==="
 command -v i2cdetect >/dev/null || fail "i2cdetect not found (install i2c-tools)"
 [[ -e "/dev/i2c-${I2C_BUS}" ]] || fail "/dev/i2c-${I2C_BUS} missing — enable I2C in raspi-config"
