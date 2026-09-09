@@ -1,5 +1,5 @@
 ---
-description: Mines a target repo's own git history for real bug-fix commits and drafts candidate eval cases (before/after code pairs with proposed ground truth) for the embedded-code-review skill's regression corpus. Produces candidates only — never writes directly to eval-cases/ without owner review. Use when explicitly asked to mine, refresh, or add to the eval corpus, or after a real bug fix lands as a natural mining moment.
+description: Mines a target repo's own git history for real bug-fix commits and drafts candidate eval cases (before/after code pairs with proposed ground truth) for the embedded-code-review skill's regression corpus. Backed by scripts/mine_eval_cases.py for the deterministic parts (scan/accept/checkpoint). Produces candidates only — never writes directly to eval-cases/ without owner review. Use when explicitly asked to mine, refresh, or add to the eval corpus, or after a real bug fix lands as a natural mining moment.
 alwaysApply: false
 ---
 
@@ -17,9 +17,16 @@ alwaysApply: false
   (.cursor/rules/embedded-code-review.mdc) to guess bug_category on
   candidates. It does not read the project-context.mdc companion file —
   mining is repo-history-based, not per-review Project Context-based.
+  The deterministic scan/accept/checkpoint mechanics live in
+  scripts/mine_eval_cases.py — invoke via bash_tool/terminal, don't
+  reimplement the git plumbing inline.
 -->
 
 ## Purpose & Scope
+
+Companion skill to `embedded-code-review` (skill_id: embedded-code-review,
+same `implementation-testing` folder) — this skill produces the inputs to
+that skill's regression corpus; it does not review code itself.
 
 Keep `eval-cases/` (the regression corpus that checks whether
 embedded-code-review's judgment holds up over time — see
@@ -67,78 +74,79 @@ silently.
 
 ## Procedure
 
-### 1. Search history for candidates
+This skill is backed by a deterministic script,
+`scripts/mine_eval_cases.py` — the mechanical steps (git log, dedup
+against the state file, `git show` extraction, file scaffolding) run as
+code, not as agent-interpreted instructions, so they execute identically
+every time. The agent's job is steps 2 and 4 below (reading results,
+drafting prose) — everything else is "run the script, read its output."
 
-Run against the target repo:
+### 1. Scan for candidates (read-only)
 
 ```bash
-git log --all --oneline -i \
-  --grep="race\|deadlock\|reentrant\|ISR\|interrupt\|priority inversion\|use-after-free\|stack overflow\|memory leak\|double free\|off-by-one\|overflow\|underflow\|watchdog\|brown-?out\|low.power\|sleep\|wake"
+python scripts/mine_eval_cases.py scan --repo <path> --system <name> \
+  [--since <ref>] [--category <concurrency|shared_resource|cleanup|low_power|fault_tolerance|state_variable>]
 ```
 
-Extend or narrow the grep terms based on the category focus, if given.
-Cross-reference commit messages against embedded-code-review's Concern-
-Specific Deep-Dive Checklists (Race Conditions & Concurrency, Shared
-Resource Management, Resource Cleanup, Low-Power Paradigms, Fault-Tolerant
-Paradigms, State Variable Management) to guess `bug_category` — don't force
-a fit; use `general` if no checklist maps cleanly.
+Writes nothing. Automatically dedupes against every `commit_hash` already
+present in `eval-cases/<system>/*/metadata.yaml`, and defaults `--since`
+to the last checkpoint in `eval-cases/<system>/.mining-state.yaml` if one
+exists (full history otherwise). Prints each new candidate's commit hash,
+subject line, and a heuristic `guessed_category` — a starting point, not
+a final answer; the heuristic is simple keyword matching and will
+sometimes miss (e.g. it may key off an incidental word in the commit
+message rather than the actual defect).
 
-### 2. Deduplicate against existing corpus and track state
+### 2. Review candidates with the owner
 
-Before drafting anything, read all `metadata.yaml` files already under
-`eval-cases/<system>/*/metadata.yaml` for this system and skip any
-`commit_hash` already present. Maintain
-`eval-cases/<system>/.mining-state.yaml`:
+Present the scan output. For each candidate the owner wants to keep,
+identify the relevant file(s) to isolate (prefer the specific file touched
+by the fix, not the whole repo) and confirm/correct the category and
+target pass.
 
-```yaml
-system: <system-name>
-last_mined_commit: <hash>
-last_mined_date: <date>
+### 3. Accept — extract and scaffold
+
+```bash
+python scripts/mine_eval_cases.py accept --repo <path> --system <name> \
+  --commit <hash> --case-id <slug> --file <path-in-repo> \
+  --category <category> --target-pass <pass1_intent|pass2_fault_posture|pass3_fit_placement|pass4_regression_coverage> \
+  [--criticality <low|medium|high>]
 ```
 
-so each run only scans new history rather than rescanning everything.
+Runs `git show <hash>^:<file>` / `git show <hash>:<file>` to write
+`before.<ext>` / `after.<ext>` byte-exact from the repo, and scaffolds
+`metadata.yaml` (fully filled except the two `expected_verdict_*` fields,
+left as `TODO`) and a stub `expected-findings.md` carrying the
+`⚠️ MINED CANDIDATE — NOT YET VALIDATED` header. Does **not** advance
+the mining checkpoint — a rejected/skipped run shouldn't silently move
+past commits the owner hasn't actually seen yet.
 
-### 3. Extract before/after pairs
+### 4. Draft the findings prose
 
-For each surviving candidate commit `<hash>`:
-- `before`: `git show <hash>^:<path>` (or the specific hunk, not the whole
-  file — smaller cases are cheaper to run repeatedly and faster to review).
-- `after`: `git show <hash>:<path>`.
-- Prefer isolating the specific function(s) touched over the full file.
+This is the one part that stays agent judgment, not script: fill in the
+scaffolded `expected-findings.md`'s Defect / Consequence / Findings
+sections from the actual diff, following the convention in
+`eval-cases-template/example-case/expected-findings.md`. Write with full
+confidence, not hedged — the owner should be reviewing a specific,
+checkable claim, not filling in a vague sketch themselves. Also fill the
+two `expected_verdict_*` `TODO` fields in `metadata.yaml`.
 
-### 4. Draft metadata.yaml
+### 5. Owner validates, then checkpoint
 
-Fill every field per the schema in `eval-cases-template/README.md`. Set
-`source: real`, populate `commit_hash`, infer `bug_category` and
-`target_pass` (which of embedded-code-review's Passes 1-4 should primarily
-catch this) from the commit message and diff content. Leave `criticality`
-as `medium` unless the repo's own Project Context specifies otherwise for
-that module.
+Once the owner has reviewed the drafted findings against the real defect
+and confirmed they're accurate, remove the `MINED CANDIDATE` header (or
+replace it with a `Validated <date> by owner` line, per the convention
+used in the `bus-applications` cases). Only after the **whole batch**
+from a scan has been reviewed — accepted cases finalized, rejected ones
+explicitly skipped — advance the checkpoint:
 
-### 5. Draft expected-findings.md — clearly marked as a proposal
-
-Follow the convention in `eval-cases-template/example-case/expected-
-findings.md`, prefixed with:
-
+```bash
+python scripts/mine_eval_cases.py checkpoint --repo <path> --system <name> \
+  --commit <newest-hash-seen-in-the-batch> [--source-repo <name>] [--notes "..."]
 ```
-## ⚠️ MINED CANDIDATE — NOT YET VALIDATED
-This was auto-drafted from commit <hash>. Verify the described defect and
-consequence match reality before treating this as ground truth.
-```
 
-Write the technical content with full confidence, not hedged — the owner
-should be reviewing a specific, checkable claim, not filling in a vague
-sketch themselves.
-
-### 6. Present candidates, don't commit them
-
-Summarize each candidate (commit hash, one-line defect description,
-proposed `bug_category`) and let the owner accept, edit, or reject each
-one individually. Only accepted cases get written into `eval-cases/`.
-Update the state file (step 2) only after the owner has reviewed the
-batch, not before — a rejected run shouldn't advance the checkpoint past
-commits that were only proposed, in case the owner wants to revisit them
-with different category focus later.
+This is a separate, explicit step so a partially-reviewed batch never
+silently loses commits the owner hasn't gotten to yet.
 
 ## Refresh Cadence
 

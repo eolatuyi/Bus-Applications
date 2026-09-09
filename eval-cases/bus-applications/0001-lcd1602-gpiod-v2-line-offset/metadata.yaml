@@ -1,0 +1,14 @@
+case_id: 0001-lcd1602-gpiod-v2-line-offset
+system: bus-applications
+source: real
+commit_hash: 4efc865eef7964e56fcc6e090f56e83d930eb8ea
+bug_category: shared_resource
+target_pass: pass2_fault_posture
+criticality: high
+expected_verdict_before: do-not-merge
+expected_verdict_after: merge-with-followups
+notes: >-
+  Mined 2026-09-08. Source file: src/lcd1602.cpp.
+  Defect is libgpiod v2 set_value offset 0 (must be the requested chip line).
+  Same commit also retimes HD44780 init / pulseEnable; those are not this case's
+  required finding. Validated 2026-09-08 by owner.

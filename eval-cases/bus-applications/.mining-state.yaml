@@ -1,0 +1,7 @@
+system: bus-applications
+last_mined_commit: 4efc865eef7964e56fcc6e090f56e83d930eb8ea
+last_mined_date: '2026-09-08'
+source_repo: Bus-Applications
+notes: First mining run. Accepted 0001-lcd1602-gpiod-v2-line-offset (4efc865). Skipped
+  bd5cf5e (extern C; owner did not keep) and d018c9e (gpiod v1-to-v2 refactor; after
+  still had offset-0).
