@@ -17,7 +17,27 @@ constexpr auto kSensorRetryDelay = std::chrono::milliseconds(50);
 constexpr int kStalePotSamples = 25;  // 5 s at 200 ms — warn if pot never moves
 
 void printUsage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [--no-lcd | --test-hc595]\n";
+    std::cerr << "Usage: " << prog << " [--no-lcd | --test-hc595 | --test-lcd]\n";
+}
+
+void runLcdBringUp() {
+    std::cout << "LCD1602 bring-up on GPIO 17/27/22-25 (/dev/gpiochip0)\n"
+              << "Adjust VO contrast; expect Hello then counting. Ctrl-C to stop.\n";
+    LCD1602 lcd;
+    lcd.init();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("LCD bring-up OK ");
+    lcd.setCursor(1, 0);
+    lcd.print("GPIO lines live");
+    int n = 0;
+    while (true) {
+        lcd.setCursor(1, 0);
+        char buf[17];
+        snprintf(buf, sizeof(buf), "count=%-10d", n++);
+        lcd.print(buf);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
 }
 
 void runHc595BringUp(HC595& sr) {
@@ -60,19 +80,22 @@ void printHardwareBanner() {
 int main(int argc, char* argv[]) {
     bool use_lcd = true;
     bool test_hc595 = false;
+    bool test_lcd = false;
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--no-lcd") == 0) {
             use_lcd = false;
         } else if (std::strcmp(argv[i], "--test-hc595") == 0) {
             test_hc595 = true;
+        } else if (std::strcmp(argv[i], "--test-lcd") == 0) {
+            test_lcd = true;
         } else {
             printUsage(argv[0]);
             return 1;
         }
     }
 
-    if (test_hc595 && !use_lcd) {
+    if ((test_hc595 && !use_lcd) || (test_lcd && !use_lcd) || (test_hc595 && test_lcd)) {
         printUsage(argv[0]);
         return 1;
     }
@@ -81,6 +104,10 @@ int main(int argc, char* argv[]) {
         if (test_hc595) {
             HC595 sr;
             runHc595BringUp(sr);
+            return 0;
+        }
+        if (test_lcd) {
+            runLcdBringUp();
             return 0;
         }
 

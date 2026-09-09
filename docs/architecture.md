@@ -13,7 +13,7 @@ MPU6050  ADS7830  HC595  LCD1602     device drivers (protocol + scaling)
    I2CDevice    SPIDevice   libgpiod    bus / GPIO wrappers
         │            │         │
         ▼            ▼         ▼
-  /dev/i2c-1   /dev/spidev0.0  gpiochip0
+  /dev/i2c-1   /dev/spidev0.0  /dev/gpiochip0
 ```
 
 ## Layers
