@@ -4,8 +4,14 @@
 
 class I2CDevice {
 public:
-    I2CDevice(int bus = 1, uint8_t addr = 0x68);
+    I2CDevice(int bus, uint8_t addr);
     ~I2CDevice();
+
+    I2CDevice(const I2CDevice&) = delete;
+    I2CDevice& operator=(const I2CDevice&) = delete;
+    I2CDevice(I2CDevice&&) = delete;
+    I2CDevice& operator=(I2CDevice&&) = delete;
+
     void setAddress(uint8_t addr);
 
     void writeByte(uint8_t reg, uint8_t val);
@@ -21,4 +27,5 @@ private:
     int bus_;
     uint8_t addr_;
     void openBus();
+    void closeFd();
 };

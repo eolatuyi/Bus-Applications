@@ -38,17 +38,22 @@ concurrency.
     SPI. Each I2C driver opens its own `/dev/i2c-1` file descriptor.
     Acceptable while there is one caller; a second thread or process on
     the same bus is out of scope.
-  - LCD1602 bit-bangs HD44780 over GPIO with busy-wait microsecond delays
-    (`delay_us`). That is required by the controller timing, not a missed
-    low-power wait.
+  - LCD1602 bit-bangs HD44780 over GPIO with `std::this_thread::sleep_for`
+    microsecond delays (`delay_us`). Sleeps may be longer than the datasheet
+    minimum; that is required controller timing, not a missed low-power wait.
   - No HIL suite in CI yet. `scripts/hil_test.sh` on the Pi covers automated
-    smoke (I2C scan, app run); operator steps document pot, LED bar, and LCD.
-  - Unit tests: `ads7830_protocol_test`, `hc595_bar_test` via `ctest` on host/Pi.
+    smoke (I2C scan, `--test-hc595`, `--test-lcd`, `--no-lcd`); operator steps
+    document pot, LED bar, and LCD contrast. `--test-lcd` warns (does not fail)
+    if GPIO is unavailable unless `STRICT_LCD=1`.
+  - Unit tests via `ctest` on host/Pi: `ads7830_protocol_test`, `hc595_bar_test`,
+    `mpu6050_protocol_test`, `lcd1602_protocol_test`, `app_cli_test`.
   - Main loop retries transient sensor errors (50 ms backoff) instead of exiting;
     ADS7830 `readAnalog` retries up to 3 times (10 ms between attempts).
-  - `--test-hc595` walks Q0–Q7 then fills a bar (no I2C/LCD); mutually exclusive
-    with `--no-lcd`. Bring-up patterns live in `hc595_bar.hpp` (`hc595WalkBit`,
-    `hc595BarFill`) and are unit-tested.
+    `--test-hc595` and `--test-lcd` use the same 50 ms retry.
+  - `--test-hc595` walks Q0–Q7 then fills a bar (no I2C/LCD); `--test-lcd` is
+    GPIO-only. `--no-lcd`, `--test-hc595`, and `--test-lcd` are mutually
+    exclusive. Bring-up patterns live in `hc595_bar.hpp` (`hc595WalkBit`,
+    `hc595BarFill`) and are unit-tested. Analog 255 lights all eight bar LEDs.
   - `I2CDevice::readRawByte()` returns the raw `i2c_smbus_read_byte`
     result (including negative errno-style failures). Callers must check;
     `ADS7830::readAnalog` does, other callers must not assume success.

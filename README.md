@@ -62,18 +62,23 @@ sudo apt install -y build-essential cmake git libi2c-dev i2c-tools libgpiod-dev
 mkdir build && cd build
 cmake ..
 make
-ctest --output-on-failure   # host-side unit tests (protocol + LED bar math)
+ctest --output-on-failure   # host-side unit tests (protocol, CLI, LED bar math)
 ./app --test-hc595          # SPI only: walk Q0-Q7 then fill LED bar (no I2C/LCD/pot)
+./app --test-lcd            # GPIO only: HD44780 bring-up (no I2C/SPI). Needs gpio group.
 ./app --no-lcd              # I2C + SPI only while LCD is unwired (no sudo if in i2c/spi groups)
 ./app                       # full dashboard once LCD is wired (prefer without sudo if in gpio group)
 ```
+
+`--no-lcd`, `--test-hc595`, and `--test-lcd` are mutually exclusive. The pot maps
+onto all eight LED-bar segments (`analog 255` → Q0–Q7 on).
 
 ### Hardware-in-the-loop (on the Pi)
 
 ```bash
 chmod +x scripts/hil_test.sh
-./scripts/hil_test.sh                  # smoke: i2cdetect + 8 s app run
+./scripts/hil_test.sh                  # smoke: i2cdetect + SPI/LCD bring-up + 8 s --no-lcd
 STRICT_POT=1 ./scripts/hil_test.sh     # also fail if pot not moved during capture
+STRICT_LCD=1 ./scripts/hil_test.sh     # fail if --test-lcd cannot open GPIO
 ```
 
 ## Cursor / review process
@@ -93,10 +98,10 @@ Open this directory as the Cursor workspace so those rules load.
 
 - Initial build on Raspberry Pi 3 Model B Rev 1.2: **Completed** — `app` builds on target (confirmed).
 - Test on target device (functional/system testing): **In progress**
-  - **MPU6050** @ `0x68`: **Verified** — accel/gyro/temp readings sane on hardware (`--no-lcd` run).
+  - **MPU6050** @ `0x68`: **Verified** — accel/gyro/temp readings sane on hardware (`--no-lcd` run); `init()` checks `WHO_AM_I`.
   - **ADS7830** @ `0x4B` (CH2 pot): **Verified** — `Pot=` tracks knob; HIL smoke + operator confirm.
   - **74HC595** / SPI LED bar: **Verified** — walk/bar via `--test-hc595`; bar tracks pot under `./app --no-lcd`.
-  - **LCD1602** / GPIO: **Not started** — display not wired; use `./app --no-lcd` until GPIO lines are connected.
-- Unit testing: **In progress** — `ads7830_protocol_test` and `hc595_bar_test` via `ctest` (2/2 on Pi).
-- System testing / integration: **Partial** — MPU6050 + ADS7830 + 74HC595 + LED bar integrated without LCD; LCD still outstanding. Full HIL script PASS on Pi (`i2cdetect`, `--test-hc595`, `--no-lcd` smoke).
+  - **LCD1602** / GPIO: **Driver ready, panel not verified** — `--test-lcd` bring-up exists; display not yet wired. Use `--test-lcd` before full `./app`.
+- Unit testing: **In progress** — `ads7830_protocol_test`, `hc595_bar_test`, `mpu6050_protocol_test`, `lcd1602_protocol_test`, `app_cli_test` via `ctest`.
+- System testing / integration: **Partial** — MPU6050 + ADS7830 + 74HC595 + LED bar integrated without LCD; LCD hardware still outstanding. HIL on Pi: `i2cdetect`, `--test-hc595`, `--test-lcd` (GPIO), `--no-lcd` smoke.
 

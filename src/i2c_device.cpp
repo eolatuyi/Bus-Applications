@@ -9,18 +9,34 @@ extern "C" {
 #include <i2c/smbus.h>
 }
 
-I2CDevice::I2CDevice(int bus, uint8_t addr) : fd_(-1), bus_(bus), addr_(addr) { openBus(); }
-I2CDevice::~I2CDevice() { if (fd_ >= 0) close(fd_); }
+I2CDevice::I2CDevice(int bus, uint8_t addr) : fd_(-1), bus_(bus), addr_(addr) {
+    openBus();
+}
+
+I2CDevice::~I2CDevice() { closeFd(); }
+
+void I2CDevice::closeFd() {
+    if (fd_ >= 0) {
+        close(fd_);
+        fd_ = -1;
+    }
+}
 
 void I2CDevice::openBus() {
     std::string dev = "/dev/i2c-" + std::to_string(bus_);
     fd_ = open(dev.c_str(), O_RDWR);
     if (fd_ < 0) throw std::runtime_error("Failed to open " + dev);
-    if (ioctl(fd_, I2C_SLAVE, addr_) < 0) throw std::runtime_error("Failed to set I2C addr");
+    if (ioctl(fd_, I2C_SLAVE, addr_) < 0) {
+        closeFd();
+        throw std::runtime_error("Failed to set I2C addr");
+    }
 }
+
 void I2CDevice::setAddress(uint8_t addr) {
+    if (ioctl(fd_, I2C_SLAVE, addr) < 0) {
+        throw std::runtime_error("Failed to set I2C addr");
+    }
     addr_ = addr;
-    if (ioctl(fd_, I2C_SLAVE, addr_) < 0) throw std::runtime_error("Failed to set I2C addr");
 }
 
 void I2CDevice::writeByte(uint8_t reg, uint8_t val) {

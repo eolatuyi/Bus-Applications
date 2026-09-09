@@ -33,10 +33,26 @@ grep -q "walk Q0" "$spi_log" || fail "no walk Q0 in --test-hc595 output"
 pass "--test-hc595 produced walk pattern (visual check is still operator)"
 rm -f "$spi_log"
 
+echo "=== LCD GPIO bring-up smoke ==="
+lcd_log=$(mktemp)
+lcd_rc=0
+timeout 3 "$APP" --test-lcd >"$lcd_log" 2>&1 || lcd_rc=$?
+if [[ "$lcd_rc" -eq 124 ]]; then
+  grep -q "LCD bring-up OK" "$lcd_log" || fail "no LCD bring-up OK in --test-lcd output"
+  grep -q "count=" "$lcd_log" || fail "no count= in --test-lcd output"
+  pass "--test-lcd produced bring-up text (contrast / glyphs still operator)"
+elif [[ "${STRICT_LCD:-0}" == "1" ]]; then
+  fail "--test-lcd exited $lcd_rc — gpio group / chip? see $lcd_log"
+else
+  warn "--test-lcd did not run (exit $lcd_rc) — add user to gpio group, or STRICT_LCD=1 to fail"
+fi
+rm -f "$lcd_log"
+
 echo "=== App smoke (MPU6050 + ADS7830 + SPI, no LCD) ==="
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 timeout "$RUN_SECS" "$APP" --no-lcd >"$log" 2>&1 || [[ $? -eq 124 ]] || fail "app exited early — see $log"
+grep -q "MPU6050 @0x68 WHO_AM_I ok" "$log" || fail "MPU6050 WHO_AM_I banner missing"
 grep -q "ADS7830 @0x4b pot=CH2" "$log" || fail "startup banner missing (wrong build?)"
 grep -q "Accel\[g\]=" "$log" || fail "no MPU6050 samples in log"
 grep -q "Pot=" "$log" || fail "no ADS7830 samples in log"
@@ -45,11 +61,14 @@ pass "app ran ${RUN_SECS}s without fatal error"
 echo "=== Operator checks (manual) ==="
 echo "  0. LED bar first: $APP --test-hc595  (walk Q0-Q7, then bar fill; Ctrl-C)."
 echo "  1. Turn the pot fully CCW then CW — Pot= should span roughly 0–255."
+echo "     Full CW should light all eight bar segments (Q0–Q7)."
 echo "  2. LED bar on 74HC595 should track Pot= monotonically."
 echo "  3. Tilt the MPU6050 — Accel[g] axes should change smoothly."
-echo "  4. Wire LCD per README, run: $APP (no --no-lcd)"
-echo "     - Expect 'I2C/SPI Dashboard' then live Pot/ax lines."
+echo "  4. Wire LCD per README, run: $APP --test-lcd"
+echo "     - Expect 'LCD bring-up OK' on line 1 and a counting line 2."
 echo "     - Adjust VO contrast if blank; run WITHOUT sudo if in gpio group."
+echo "  5. Then full dashboard: $APP (no --no-lcd)"
+echo "     - Expect 'I2C/SPI Dashboard' then live Pot/ax lines."
 
 if [[ "${STRICT_POT:-0}" == "1" ]]; then
   min=$(grep -o 'Pot=[0-9]*' "$log" | sed 's/Pot=//' | sort -n | head -1)

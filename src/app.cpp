@@ -1,10 +1,10 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <cstring>
 #include <memory>
 #include <algorithm>
-#include <iomanip>
+#include <cstdio>
+#include "app_cli.hpp"
 #include "mpu6050.hpp"
 #include "ads7830.hpp"
 #include "hc595.hpp"
@@ -22,21 +22,33 @@ void printUsage(const char* prog) {
 
 void runLcdBringUp() {
     std::cout << "LCD1602 bring-up on GPIO 17/27/22-25 (/dev/gpiochip0)\n"
-              << "Adjust VO contrast; expect Hello then counting. Ctrl-C to stop.\n";
+              << "Adjust VO contrast; expect 'LCD bring-up OK' then counting. Ctrl-C to stop.\n";
     LCD1602 lcd;
-    lcd.init();
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("LCD bring-up OK ");
-    lcd.setCursor(1, 0);
-    lcd.print("GPIO lines live");
+    bool inited = false;
     int n = 0;
     while (true) {
-        lcd.setCursor(1, 0);
-        char buf[17];
-        snprintf(buf, sizeof(buf), "count=%-10d", n++);
-        lcd.print(buf);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        try {
+            if (!inited) {
+                lcd.init();
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("LCD bring-up OK ");
+                lcd.setCursor(1, 0);
+                lcd.print("GPIO lines live");
+                inited = true;
+            }
+            lcd.setCursor(1, 0);
+            char buf[17];
+            std::snprintf(buf, sizeof(buf), "count=%-10d", n);
+            lcd.print(buf);
+            std::cout << "LCD bring-up OK count=" << n << std::endl;
+            ++n;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        } catch (const std::exception& ex) {
+            std::cerr << "LCD error (retrying): " << ex.what() << std::endl;
+            inited = false;
+            std::this_thread::sleep_for(kSensorRetryDelay);
+        }
     }
 }
 
@@ -69,8 +81,10 @@ void runHc595BringUp(HC595& sr) {
 }
 
 void printHardwareBanner() {
-    std::cout << "ADS7830 @" << std::hex << std::showbase
-              << static_cast<int>(ADS7830::kAddr)
+    std::cout << "MPU6050 @" << std::hex << std::showbase
+              << static_cast<int>(MPU6050::kAddr)
+              << " WHO_AM_I ok\n"
+              << "ADS7830 @" << static_cast<int>(ADS7830::kAddr)
               << " pot=CH" << std::dec
               << static_cast<int>(ADS7830::kPotChannel)
               << " (Freenove projects board)\n";
@@ -78,45 +92,29 @@ void printHardwareBanner() {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-    bool use_lcd = true;
-    bool test_hc595 = false;
-    bool test_lcd = false;
-
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "--no-lcd") == 0) {
-            use_lcd = false;
-        } else if (std::strcmp(argv[i], "--test-hc595") == 0) {
-            test_hc595 = true;
-        } else if (std::strcmp(argv[i], "--test-lcd") == 0) {
-            test_lcd = true;
-        } else {
-            printUsage(argv[0]);
-            return 1;
-        }
-    }
-
-    if ((test_hc595 && !use_lcd) || (test_lcd && !use_lcd) || (test_hc595 && test_lcd)) {
+    AppFlags flags;
+    if (!parseAppFlags(argc, argv, flags) || !appFlagsMutuallyExclusive(flags)) {
         printUsage(argv[0]);
         return 1;
     }
 
     try {
-        if (test_hc595) {
+        if (flags.test_hc595) {
             HC595 sr;
             runHc595BringUp(sr);
             return 0;
         }
-        if (test_lcd) {
+        if (flags.test_lcd) {
             runLcdBringUp();
             return 0;
         }
 
-        MPU6050 imu(0x68);
+        MPU6050 imu;
         imu.init();
         ADS7830 adc;
         HC595 sr;
         std::unique_ptr<LCD1602> lcd;
-        if (use_lcd) {
+        if (flags.use_lcd) {
             lcd = std::make_unique<LCD1602>();
             lcd->init();
             lcd->clear();
@@ -142,8 +140,8 @@ int main(int argc, char* argv[]) {
                 potMin = std::min(potMin, pot);
                 potMax = std::max(potMax, pot);
                 ++potSamples;
-                if (!stalePotWarned && potSamples >= kStalePotSamples &&
-                    potMin == potMax) {
+                if (stalePotShouldWarn(potSamples, potMin, potMax, kStalePotSamples,
+                                       stalePotWarned)) {
                     std::cerr << "Warning: pot reading unchanged on ADS7830 CH"
                               << static_cast<int>(ADS7830::kPotChannel)
                               << " — turn the knob or verify Freenove CH2 wiring\n";
@@ -158,12 +156,12 @@ int main(int argc, char* argv[]) {
                 if (lcd) {
                     lcd->setCursor(0, 0);
                     char buf1[17];
-                    snprintf(buf1, sizeof(buf1), "Pot:%3d        ",
-                             static_cast<int>(pot));
+                    std::snprintf(buf1, sizeof(buf1), "Pot:%3d        ",
+                                  static_cast<int>(pot));
                     lcd->print(buf1);
                     lcd->setCursor(1, 0);
                     char buf2[17];
-                    snprintf(buf2, sizeof(buf2), "ax:%+1.2fg     ", r.ax_g);
+                    std::snprintf(buf2, sizeof(buf2), "ax:%+1.2fg     ", r.ax_g);
                     lcd->print(buf2);
                 }
             } catch (const std::exception& ex) {

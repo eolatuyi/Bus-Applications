@@ -1,15 +1,12 @@
 #pragma once
 #include "i2c_device.hpp"
-
-struct MpuRead {
-    float ax_g, ay_g, az_g;
-    float gx_dps, gy_dps, gz_dps;
-    float temp_c;
-};
+#include "mpu6050_protocol.hpp"
 
 class MPU6050 {
 public:
-    explicit MPU6050(uint8_t addr = 0x68);
+    static constexpr uint8_t kAddr = 0x68;
+
+    explicit MPU6050(uint8_t addr = kAddr);
     void init();
     MpuRead read();
 private:

@@ -8,6 +8,11 @@ public:
             const char* chip_path="/dev/gpiochip0");
     ~LCD1602();
 
+    LCD1602(const LCD1602&) = delete;
+    LCD1602& operator=(const LCD1602&) = delete;
+    LCD1602(LCD1602&&) = delete;
+    LCD1602& operator=(LCD1602&&) = delete;
+
     void init();
     void clear();
     void setCursor(uint8_t row, uint8_t col);
@@ -15,12 +20,7 @@ public:
 
 private:
     struct gpiod_chip* chip_;
-    struct gpiod_line_request* rs_;
-    struct gpiod_line_request* e_;
-    struct gpiod_line_request* d4_;
-    struct gpiod_line_request* d5_;
-    struct gpiod_line_request* d6_;
-    struct gpiod_line_request* d7_;
+    struct gpiod_line_request* request_;
     unsigned int rs_off_, e_off_, d4_off_, d5_off_, d6_off_, d7_off_;
 
     void pulseEnable();
@@ -29,5 +29,5 @@ private:
     void cmd(uint8_t c) { write8(c, false); }
     void data(uint8_t d) { write8(d, true); }
     void delay_us(unsigned int us);
-    void setLine(struct gpiod_line_request* req, unsigned int offset, bool on);
+    void setLine(unsigned int offset, bool on);
 };

@@ -5,16 +5,28 @@
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 
-SPIDevice::SPIDevice(const char* dev, uint32_t speed) {
+SPIDevice::SPIDevice(const char* dev, uint32_t speed) : fd_(-1) {
     fd_ = open(dev, O_RDWR);
     if (fd_ < 0) throw std::runtime_error("Open SPI failed");
     uint8_t mode = SPI_MODE_0;
     uint8_t bits = 8;
-    if (ioctl(fd_, SPI_IOC_WR_MODE, &mode) < 0) throw std::runtime_error("Set SPI mode failed");
-    if (ioctl(fd_, SPI_IOC_WR_BITS_PER_WORD, &bits) < 0) throw std::runtime_error("Set bits failed");
-    if (ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed) < 0) throw std::runtime_error("Set speed failed");
+    auto fail = [this](const char* msg) {
+        closeFd();
+        throw std::runtime_error(msg);
+    };
+    if (ioctl(fd_, SPI_IOC_WR_MODE, &mode) < 0) fail("Set SPI mode failed");
+    if (ioctl(fd_, SPI_IOC_WR_BITS_PER_WORD, &bits) < 0) fail("Set bits failed");
+    if (ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed) < 0) fail("Set speed failed");
 }
-SPIDevice::~SPIDevice() { if (fd_ >= 0) close(fd_); }
+
+SPIDevice::~SPIDevice() { closeFd(); }
+
+void SPIDevice::closeFd() {
+    if (fd_ >= 0) {
+        close(fd_);
+        fd_ = -1;
+    }
+}
 
 void SPIDevice::transfer(const std::vector<uint8_t>& tx) {
     struct spi_ioc_transfer tr{};
