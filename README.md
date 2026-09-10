@@ -87,6 +87,8 @@ This repo consumes skills from the personal `sdlc-skills` collection.
 
 - Review rule: `.cursor/rules/embedded-code-review.mdc` (adapter; canonical
   source lives in `sdlc-skills`)
+- Architecture discovery: `.cursor/rules/architectural-discovery.mdc`
+  (adapter; canonical source + `scripts/architect.py` live in `sdlc-skills`)
 - Repo defaults: `.cursor/rules/project-context.mdc`
 - Architecture: `docs/architecture.md`
 - Local reviews only: `reviews/<path-mirroring-source>/<YYYY-MM-DD>_<short-hash>.md`

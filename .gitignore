@@ -26,3 +26,6 @@ Thumbs.db
 
 # Review reports stay on the machine that produced them
 reviews/
+
+# Architectural discovery working output (regenerable)
+architecture-out/

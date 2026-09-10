@@ -1,0 +1,427 @@
+---
+description: Model-based architectural discovery and invention for embedded SW/FW. Extracts a structured model (objects, multiplicity, HW couplings, I/O/jobs/sync, state) and renders sparse Mermaid UML structure, state, and I/O diagrams. Scopes to working tree, unpushed changes, a commit, a remote commit, or a PR. Follow-up questions must update architecture-out/<session>/session.md in the same turn via session refine. Paste fenced mermaid in chat (Cursor local preview of unpushed .mmd often does not render). Use when asked about architecture, structure, UML, Mermaid, couplings, bus contention, firmware design, or inventing a to-be architecture.
+alwaysApply: false
+---
+
+<!--
+  ADAPTER NOTE: Generated from sdlc-skills/skills/design/architectural-discovery.md
+  (0.1.4-draft). Run python3 ../sdlc-skills/scripts/architect.py — do not
+  patch tool imports or write a one-off analyzer. Paste fenced Mermaid in
+  chat; architecture-out/ is gitignored so an app-repo push is not a viewer.
+-->
+
+## Purpose & Scope
+
+Architectural discovery and/or invention for embedded SW/FW. Adopt a
+**model-based** paradigm: extract (or propose) an explicit model of critical
+objects, their multiplicity, couplings, hardware resources, I/O/jobs, and
+state — then reason against that model. Mermaid UML is the working output
+because a picture is worth more than a thousand words.
+
+This skill is biased for embedded software and firmware: buses, GPIO, IRQs,
+DMA, processors, RTOS queues/tasks, and the software objects that claim them
+are first-class, not footnotes.
+
+It does two jobs, never mixed silently:
+
+1. **Discovery** — approximate the architecture that *is* (code + HW). Label
+   every inference. Do not invent objects that are not in the code/docs.
+2. **Invention** — propose the architecture that *should be*, in the same
+   object template and model schema, so as-is vs to-be is comparable.
+
+A session always has a **boundary** (path prefixes) and a **scope** (working
+tree, unpushed changes, a commit, a remote commit, or a PR). The first
+diagram is the most fundamental approximation of the system. Later questions
+refine with `--focus`, they do not pile every class onto one crowded chart.
+
+Deterministic mechanics live in `scripts/architect.py`. The agent does not
+hand-draw Mermaid as the source of truth — it runs the tools, then reasons.
+
+## Trigger Conditions
+
+- User asks to discover, map, explain, or invent architecture / structure /
+  couplings / UML / Mermaid for a codebase or a change.
+- A PR, commit, unpushed set, or remote commit needs architectural impact
+  analysis (contention, new HW claims, new critical objects).
+- User asks how a critical object handles jobs (queue, selection, throughput,
+  turnaround, sync primitives / invariants).
+- User explicitly invokes this skill ("architecture", "structure diagram",
+  "who owns this bus", "invent a driver split").
+
+## Inputs Required
+
+- **Repo path** — the actual local codebase.
+- **Scope** — one of: `working-tree` | `unpushed` | `commit` | `remote-commit`
+  | `pr`. If the user names a PR/commit/unpushed set, use that; otherwise
+  default to `working-tree` inside the stated boundary.
+- **Boundary** — path prefixes (default: `src`, `include`, `firmware`, `app`,
+  `drivers`, `hal`, `bsp`). Always state the boundary in the report.
+- **Project Context** (same resolution order as other skills in this repo):
+  in-session statement > `.cursor/rules/project-context.mdc` >
+  README/architecture docs > conservative inference, flagged as inferred.
+- **Mode**: discovery, invention, or both (as-is then to-be). If absent,
+  start with discovery; invent only when asked or when discovery exposes a
+  missing arbiter/object the user wants designed.
+
+## Procedure
+
+Copy this checklist and track it:
+
+```
+Task Progress:
+- [ ] 0. Mode + boundary + scope named
+- [ ] 1. scripts/architect.py analyze (do not eyeball the tree first)
+- [ ] 2. Fundamental structure diagram (sparse Mermaid)
+- [ ] 3. Critical-object I/O / jobs / sync / contention
+- [ ] 4. State diagram for events that change who may run
+- [ ] 5. Sequence only if a specific interaction is in question
+- [ ] 6. Reason (discovery) or propose (invention) against the model
+- [ ] 7. Refine on follow-up questions — new focused diagram, not a bigger one
+- [ ] 8. Same-turn persist: patch session.md + `session refine` before ending the turn
+```
+
+### 0. Name the frame
+
+State in one short block: mode, boundary, scope, and whether this is a
+refinement of a previous model. If scope is a commit/PR that only touches
+`app.cpp` (or equivalent god-file), follow-includes will expand; say so, and
+offer `--focus` / `--no-follow-includes`.
+
+### 1. Extract the model (deterministic)
+
+From the `sdlc-skills` checkout (sibling of the target repo is typical):
+
+```bash
+python3 scripts/architect.py analyze --repo <path> \
+  --scope working-tree|unpushed|commit|remote-commit|pr \
+  [--commit HASH | --remote-commit HASH | --pr N] \
+  --boundary src [--boundary include] \
+  --out <target-repo>/architecture-out/ \
+  [--focus ObjectName] [--max-nodes 12]
+```
+
+Writes `model.json`, `structure.mmd`, `io.mmd`, `state.mmd`, `sequence.mmd`,
+`report.md`, and `session.md` (created once; never overwritten by `analyze`).
+Also writes `architecture-out/.current` pointing at this session dir.
+`model.json` is the source of truth; Mermaid is a projection. **`session.md`
+is the living working output** — chat is a copy, not a substitute.
+
+Empty file set → stop. Do not silently switch to the whole tree. Widen
+boundary or change scope with the owner.
+
+Do **not** write a one-off `python3 - <<'PY'` analyzer. If a NameError
+mentions `select_fundamental`, that is a tool bug to log — do not patch
+imports in `extract.py` mid-session. Run:
+
+```bash
+python3 scripts/architect.py analyze ...
+python3 scripts/architect.py diagram --model <dir>/model.json --kind structure --focus I2CDevice
+```
+
+Supported imports if you must (all re-exported):
+`from architect import select_fundamental` and
+`from architect.extract import select_fundamental`.
+
+Self-check the tools when behavior looks wrong:
+
+```bash
+python3 scripts/architect.py self-test
+```
+
+### 2. Fundamental structure diagram
+
+The primary diagram is a **UML structure / class diagram** (Mermaid
+`classDiagram`). Every critical object uses this template (fields, not
+prose):
+
+- identity + role (application / driver / bus / hw / processor)
+- **multiplicity** (how many live)
+- **inputs / outputs** (service surface)
+- **jobs**: capacity, selection, queue or none
+- **sync** primitives (or `none`)
+- **hw**: ports, buses, GPIO, IRQs, processor
+- **relations**: `requires` (composition), `uses` (incl. HW), `depends-on`
+
+Hardware resources (I2C/SPI/UART/GPIO/IRQ/processor) are objects with
+multiplicity, not labels on arrows.
+
+Readability rule: if you cannot take the diagram in at a glance, it has
+failed. Default `--max-nodes 12`. GPIO lines are bundled. Protocol helpers
+and config structs stay off the fundamental chart.
+
+**Viewing surface:** every turn that has a diagram, paste the fenced
+` ```mermaid ` block in the chat reply. That is what Cursor renders for
+the owner today. Local markdown preview of `session.md` / `*.mmd` often
+shows source until the file is on GitHub. `architecture-out/` is gitignored
+on Bus-Applications — pushing the app repo does not publish those charts.
+Chat is the view; `session.md` is still the record (same-turn `session refine`).
+
+### 3. Critical object I/O, jobs, contention (most critical pass)
+
+For each critical object the scope cares about, read `io.mmd` + the object's
+`jobs` in `model.json` and answer in prose:
+
+- How many jobs can it handle at once? (`capacity`, queue or none)
+- How is the next job selected? (caller-serial, FIFO, priority, poll)
+- Throughput / turnaround hints (loop period, bit-bang delays)
+- What sync primitive keeps its invariant true? (`none` is a finding when
+  multiplicity of a shared HW resource is >1 with no arbiter)
+
+**Contention**: multiplicity of clients on a shared bus/port/IRQ without an
+arbitration object is the signal. Do not count a bus wrapper (`I2CDevice`)
+as a peer of the drivers that compose it.
+
+### 4. State diagram
+
+Second diagram: Mermaid `stateDiagram-v2` for **critical events** that change
+who owns a resource or which jobs may run (init, claim GPIO, bus error →
+retry, ISR enter/exit, task block). This is the concurrency lens. A
+sequence diagram can show the same story for one interaction; prefer state
+unless the user asks "walk me through this call."
+
+Cosmetic UI state is out of scope. Inferred machines (poll/retry loops,
+ctor/init/dtor) must be labeled inferred.
+
+### 5. Sequence (optional zoom)
+
+Use `sequence.mmd` or `--kind sequence --focus ...` only to zoom one flow
+(e.g. one poll tick). Not a substitute for structure or state.
+
+### 6. Reason or invent
+
+**Discovery:** explain couplings and contention from the model. Quote
+multiplicity. Flag inferred vs extracted.
+
+**Invention:** propose new objects in the same template (JSON via
+`invent-scaffold`, or a focused overlay). Render with `diagram`. Diff with
+`python3 scripts/architect.py diff --as-is as_is.json --to-be to_be.json`.
+The diff reports added/removed ids **and** field edits on shared ids
+(`jobs.sync`, dropped operations, multiplicity). Relation diffs are
+`requires`/`uses` only (`depends-on` include edges are omitted so a focused
+overlay is not a fake delete list). Invention never claims to be discovery.
+
+Do not collapse two different overlays:
+
+- **Ownership** (per-device freeze of `(bus, addr)`, hide ctor, per-instance
+  mutex) — App cannot retarget or open a peer fd.
+- **Adapter arbiter** (`I2cBusLock`) — concurrent calls to *two* devices on
+  one `/dev/i2c-N`. A per-device mutex does not provide this.
+
+```bash
+python3 scripts/architect.py invent-scaffold --out to_be.json
+# edit to_be.json
+python3 scripts/architect.py diff --as-is architecture-out/model.json --to-be to_be.json
+python3 scripts/architect.py diagram --model to_be.json --kind structure --fence
+```
+
+### 7. Refine
+
+Each follow-up question produces a *narrower* diagram (`--focus`). Focused
+charts keep the named objects, what they `requires`/`uses` (including HW),
+and App as a **stub** (only edges into that set). App is not a seed — a
+SPI/I2C zoom must not drag LCD or the other bus. The unfocused fundamental
+chart stays the system approximation unless the owner asks to replace it.
+
+**A chat-only answer is an incomplete turn.** The owner opened
+`architecture-out/.../session.md` as the working artifact; if that file does
+not change in the same turn as the answer, the refinement is lost.
+
+### 8. Same-turn persist (mandatory on every follow-up)
+
+First analyze:
+
+```
+<repo>/architecture-out/<YYYY-MM-DD>_<scope-ref>/
+  session.md          ← living report (agent + tools; never clobber)
+  report.md           ← raw tool dump (ok to regenerate)
+  refinements.json    ← append-only stamp of chat follow-ups
+architecture-out/.current  → that session dir
+```
+
+On **every** follow-up, before ending the turn:
+
+1. Find the session: `python3 scripts/architect.py session current --arch-out <repo>/architecture-out`
+   (or the path the owner @-mentioned).
+2. Patch `session.md` sections the answer actually changes (diagrams, I/O
+   table, reasoning, open refinements). Write any new focused `.mmd` next to it.
+3. Stamp the Q&A so the file cannot stay stale even if a section patch is missed:
+
+```bash
+python3 scripts/architect.py session refine \
+  --arch-out <repo>/architecture-out \
+  --question "<user's follow-up, verbatim>" \
+  --answer "<the refinement that also went in chat>" \
+  --file session.md [--file sequence-ioctl.mmd] \
+  [--focus SPIDevice]
+```
+
+`--out` is optional when `.current` exists. `session refine` **appends** a
+`### Refinement N` block; it does not rewrite earlier prose.
+
+4. Skill/tool misses (not session Q&A) still go to the sdlc-skills feedback log.
+
+If `session.md` is missing, `session init --out <dir>` seeds it from `report.md`.
+
+## Decision Rules / Heuristics
+
+- Hardware first: a software object that talks to a bus without showing the
+  bus is an incomplete model.
+- Multiplicity on a shared resource with `sync: none` and no arbiter is a
+  contention finding, not a drawing detail. On a single-threaded poll loop
+  it may be an accepted deviation — still show it, then check Project
+  Context `known_deviations` before escalating.
+- Capacity defaults to 1 / caller-serial when no queue or mutex is present.
+  That is the embedded default, not "unknown."
+- Discovery does not add objects "that must exist." Invention does, labeled.
+- Prefer state over sequence for concurrency. Sequence is a zoom lens.
+- When architecture docs disagree with the extracted model, trust the code
+  for discovery, and surface the delta as a finding (docs stale, or code
+  drifted).
+- Empty scope is terminal for that invocation. Ask; don't guess a tree.
+- Project Context `criticality: non-critical` does not hide contention; it
+  only affects how hard we push a redesign.
+- Ending a refinement turn without a `session.md` change is a skill failure,
+  same class as drawing Mermaid that disagrees with `model.json`.
+- The owner sees diagrams in **agent chat**, not in Cursor's local preview
+  of unpushed `*.mmd`. Do not send them to "open the file to see Mermaid."
+
+## Checklists / Templates
+
+### Session report (skill output)
+
+```
+## Architecture: <repo> (<discovery|invention|both>)
+Boundary: <paths>
+Scope: <working-tree|unpushed|commit|pr|remote-commit> <ref>
+Project Context: architecture_reference=<path/none>, criticality=<level>
+Tool: scripts/architect.py v<tool>  model schema <schema>
+
+### Fundamental structure
+<mermaid classDiagram from structure.mmd — do not redraw by hand unless
+ the model is wrong; if so, fix model.json and re-render>
+
+### Contention (data/services on shared resources)
+| Resource | Client multiplicity | Sync / arbiter | Finding |
+|----------|---------------------|----------------|---------|
+
+### Critical object I/O and jobs
+| Object | Inputs | Outputs | Capacity / selection / queue | Sync | Period/turnaround |
+|--------|--------|---------|------------------------------|------|-------------------|
+
+### State (critical events)
+<mermaid stateDiagram-v2>
+
+### Sequence (only if asked)
+<mermaid sequenceDiagram or "not needed">
+
+### Reasoning / invention
+<what the multiplicities imply; proposed objects if inventing>
+
+### Inferred vs extracted
+<list inferences>
+
+### Open refinements
+<questions that would justify a tighter --focus diagram>
+```
+
+Object-template field meanings and Mermaid conventions:
+see [architectural-discovery-reference.md](architectural-discovery-reference.md).
+Paste the same fences in chat; do not expect Cursor local preview of
+`architecture-out/` to render them.
+
+## Worked Example
+
+First discovery run: `Bus-Applications` (Linux userspace C++ dashboard on
+Raspberry Pi — treated with the embedded bias: I2C/SPI/GPIO are the
+architecture). Boundary `src`, scope `working-tree`.
+
+Fundamental structure (tool output, pruned): App 1 --uses--> MPU6050 1
+and ADS7830 1, both `--requires-->` I2CDevice (multiplicity **2**) `--uses-->`
+`/dev/i2c-1` (shared, no arbiter). HC595 1 `--requires-->` SPIDevice `--uses-->`
+`/dev/spidev0.0` (exclusive). LCD1602 `--uses-->` `/dev/gpiochip0` and a
+bundled 6-line GPIO set (exclusive). Processor: raspberry-pi.
+
+I/O: MPU6050 `init`/`read` → `MpuRead`; ADS7830 `readAnalog`; I2CDevice
+register R/W; jobs capacity 1, caller-serial, no queue, sync none. App
+sequential-poll, periods include 200 ms loop and 50 ms retry.
+
+State (inferred): App Init → Poll → (io-error) Retry → Poll; single thread
+so Poll and Retry do not overlap. LCD Unopened → LinesClaimed → Initialized.
+
+Contention finding: two I2C clients, two `I2CDevice` instances, one bus,
+no mutex — matches this repo's documented single-thread deviation.
+
+**Invention overlay (same session, owner ask):** "proxies should resource-protect
+`I2CDevice` so if App changes, each wrapper is truly for one chip." That is
+invention, not more discovery. Overlay added `I2cDeviceGuard` (mult 2, mutex),
+froze `(bus, addr)` (drop public `setAddress`), kept construction inside the
+driver. A per-device guard is **ownership**; `I2cBusLock` would be a second
+overlay only if MPU and ADS can be called concurrently. Artifact:
+Bus-Applications `architecture-out/2026-09-09_working-tree-i2c/`
+(`to_be.json`, `structure-i2c-to-be.mmd`).
+
+Full generated discovery dump:
+[worked-examples/bus-applications/](worked-examples/bus-applications/).
+
+## Anti-Patterns / Failure Modes
+
+- Dumping every struct (protocol helpers, flags) onto the first diagram.
+- Drawing Mermaid from memory that disagrees with `model.json`.
+- Counting `I2CDevice`/`SPIDevice` as a second peer on the bus they wrap.
+- Treating a single-threaded poll as if it needed a mutex, or the reverse:
+  hiding the shared bus because today's caller is serial.
+- Sequence diagrams of the whole dashboard instead of a state machine of
+  ownership.
+- Mixing invented objects into a discovery diagram without labeling.
+- Silently analyzing the whole tree when the PR/commit file set is empty.
+- Skipping I/O/jobs because the structure chart "already looks complete."
+- **Answering a follow-up only in chat while `session.md` stays stale.** The
+  file is the record. Stamp `session refine` in the same turn. Chat is still
+  where Mermaid *renders* — paste the fence there; don't substitute a path
+  to a `.mmd` the owner cannot preview locally.
+- **Telling the owner to open `architecture-out/*.mmd` in Cursor preview.**
+  That preview often does not render Mermaid. The directory is gitignored, so
+  a GitHub push of the app repo will not either.
+- **Patching `extract.py` / `cli.py` imports mid-session** because
+  `select_fundamental` was not found. Use `architect.py analyze` or
+  `from architect import select_fundamental`. Log the miss; don't fork the tool.
+
+## Quality Gate
+
+Before `draft → validated`:
+
+- [x] Deterministic tools exist (`scope`, `extract`, `diagram`, `analyze`,
+      `diff`, `session`, `feedback`) and `self-test` passes.
+- [x] One real discovery run on an owned embedded repo (Bus-Applications).
+- [x] At least one invention overlay on a real owner question (`I2cDeviceGuard`
+      / frozen addr on Bus-Applications I2C — overlay only, not C++).
+- [x] Owner review of diagram crowding and object-template usefulness
+      (agent-chat Mermaid render on SPI/I2C sessions: "great"; local Cursor
+      preview of unpushed `.mmd` does not render — viewing surface is chat).
+- [ ] Feedback log items from the first run either applied or wontfix'd.
+- [ ] Owner sign-off (no auto-publish).
+
+## Changelog
+
+- 0.1.4-draft (2026-09-09): Viewing surface is fenced Mermaid in agent chat.
+  Cursor local preview of unpushed `session.md`/`*.mmd` often does not
+  render; `architecture-out/` is gitignored so an app-repo push is not a
+  Mermaid viewer. Persist to `session.md` still required.
+- 0.1.3-draft (2026-09-09): `--focus` is a subgraph (App stub, no sibling
+  buses). `invent_diff` reports field edits on shared object ids and ignores
+  `depends-on` noise. Folded Bus-Applications I2C invention (`I2cDeviceGuard`
+  vs `I2cBusLock`) into worked example + quality gate.
+- 0.1.2-draft (2026-09-09): Re-export `select_fundamental` from `architect`
+  and `architect.extract` (I2C session hit "analyzer is missing an import").
+  Restored `INVENTION_SCAFFOLD` CLI import. Agents must run `architect.py`,
+  not patch tool imports mid-session.
+- 0.1.1-draft (2026-09-09): Living `session.md` + `session init|refine|current`.
+  Follow-up questions must stamp the session file in the same turn; chat-only
+  answers are an anti-pattern. `analyze` creates `session.md` once and writes
+  `architecture-out/.current`. Triggered by Bus-Applications SPI chat
+  refinements that did not update `session.md` until the owner noticed.
+- 0.1.0-draft (2026-09-09): Initial skill + `scripts/architect.py`. Model-based
+  discovery/invention, scoped analysis, embedded-biased structure/state/I/O
+  Mermaid, contention from multiplicity, append-only feedback log. First
+  test on Bus-Applications; crowding/false-SPI-contention/wildcard-I2C
+  issues found and applied (see feedback log).
