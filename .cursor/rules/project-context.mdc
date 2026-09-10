@@ -42,9 +42,11 @@ concurrency.
     microsecond delays (`delay_us`). Sleeps may be longer than the datasheet
     minimum; that is required controller timing, not a missed low-power wait.
   - No HIL suite in CI yet. `scripts/hil_test.sh` on the Pi covers automated
-    smoke (I2C scan, `--test-hc595`, `--test-lcd`, `--no-lcd`); operator steps
-    document pot, LED bar, and LCD contrast. `--test-lcd` warns (does not fail)
-    if GPIO is unavailable unless `STRICT_LCD=1`.
+    smoke (I2C scan, `--test-hc595`, `--test-lcd`, `--no-lcd`, full `./app`
+    with LCD when `--test-lcd` opened GPIO); operator steps document pot,
+    LED bar, and LCD contrast. `--test-lcd` and the full-dashboard step warn
+    (do not fail) if GPIO is unavailable unless `STRICT_LCD=1`. Full `./app`
+    checks stdout for `Pot=` / `Accel` after LCD init; glyphs stay operator.
   - Unit tests via `ctest` on host/Pi: `ads7830_protocol_test`, `hc595_bar_test`,
     `mpu6050_protocol_test`, `lcd1602_protocol_test`, `app_cli_test`.
   - Main loop retries transient sensor errors (50 ms backoff) instead of exiting;

@@ -76,9 +76,9 @@ onto all eight LED-bar segments (`analog 255` → Q0–Q7 on).
 
 ```bash
 chmod +x scripts/hil_test.sh
-./scripts/hil_test.sh                  # smoke: i2cdetect + SPI/LCD bring-up + 8 s --no-lcd
+./scripts/hil_test.sh                  # smoke: i2cdetect + SPI/LCD bring-up + --no-lcd + 3 s ./app
 STRICT_POT=1 ./scripts/hil_test.sh     # also fail if pot not moved during capture
-STRICT_LCD=1 ./scripts/hil_test.sh     # fail if --test-lcd cannot open GPIO
+STRICT_LCD=1 ./scripts/hil_test.sh     # fail if --test-lcd / full ./app cannot open GPIO
 ```
 
 ## Cursor / review process
@@ -103,5 +103,5 @@ Open this directory as the Cursor workspace so those rules load.
   - **74HC595** / SPI LED bar: **Verified** — walk/bar via `--test-hc595`; bar tracks pot under `./app --no-lcd`.
   - **LCD1602** / GPIO: **Verified** — `--test-lcd` bring-up on hardware; line 1 `LCD bring-up OK`, line 2 counting; GPIO 17/27/22–25 claimed by `LCD1602`. Full `./app` shows live `Pot:` / `ax:` on the panel (rows padded to 16 columns).
 - Unit testing: **In progress** — `ads7830_protocol_test`, `hc595_bar_test`, `mpu6050_protocol_test`, `lcd1602_protocol_test`, `app_cli_test` via `ctest`.
-- System testing / integration: **Partial** — MPU6050 + ADS7830 + 74HC595 + LED bar + LCD dashboard verified on hardware (`./app`). HIL on Pi: `i2cdetect`, `--test-hc595`, `--test-lcd`, `--no-lcd` smoke. Arduino UNO still unwired.
+- System testing / integration: **Partial** — MPU6050 + ADS7830 + 74HC595 + LED bar + LCD dashboard verified on hardware (`./app`). HIL on Pi: `i2cdetect`, `--test-hc595`, `--test-lcd`, `--no-lcd`, full `./app` (LCD on). Arduino UNO still unwired.
 

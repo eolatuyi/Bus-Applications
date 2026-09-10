@@ -5,6 +5,7 @@ set -euo pipefail
 APP="${APP:-./build/app}"
 I2C_BUS="${I2C_BUS:-1}"
 RUN_SECS="${RUN_SECS:-8}"
+DASHBOARD_SECS="${DASHBOARD_SECS:-3}"
 
 pass() { echo "PASS: $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -36,11 +37,13 @@ rm -f "$spi_log"
 echo "=== LCD GPIO bring-up smoke ==="
 lcd_log=$(mktemp)
 lcd_rc=0
+lcd_ok=0
 timeout 3 "$APP" --test-lcd >"$lcd_log" 2>&1 || lcd_rc=$?
 if [[ "$lcd_rc" -eq 124 ]]; then
   grep -q "LCD bring-up OK" "$lcd_log" || fail "no LCD bring-up OK in --test-lcd output"
   grep -q "count=" "$lcd_log" || fail "no count= in --test-lcd output"
   pass "--test-lcd produced bring-up text (contrast / glyphs still operator)"
+  lcd_ok=1
 elif [[ "${STRICT_LCD:-0}" == "1" ]]; then
   fail "--test-lcd exited $lcd_rc — gpio group / chip? see $lcd_log"
 else
@@ -50,13 +53,33 @@ rm -f "$lcd_log"
 
 echo "=== App smoke (MPU6050 + ADS7830 + SPI, no LCD) ==="
 log=$(mktemp)
-trap 'rm -f "$log"' EXIT
+dash_log=$(mktemp)
+trap 'rm -f "$log" "$dash_log"' EXIT
 timeout "$RUN_SECS" "$APP" --no-lcd >"$log" 2>&1 || [[ $? -eq 124 ]] || fail "app exited early — see $log"
 grep -q "MPU6050 @0x68 WHO_AM_I ok" "$log" || fail "MPU6050 WHO_AM_I banner missing"
 grep -q "ADS7830 @0x4b pot=CH2" "$log" || fail "startup banner missing (wrong build?)"
 grep -q "Accel\[g\]=" "$log" || fail "no MPU6050 samples in log"
 grep -q "Pot=" "$log" || fail "no ADS7830 samples in log"
 pass "app ran ${RUN_SECS}s without fatal error"
+
+echo "=== App smoke (full dashboard, LCD on) ==="
+if [[ "$lcd_ok" -eq 1 ]]; then
+  dash_rc=0
+  timeout "$DASHBOARD_SECS" "$APP" >"$dash_log" 2>&1 || dash_rc=$?
+  if [[ "$dash_rc" -ne 124 ]]; then
+    fail "full ./app exited $dash_rc — LCD init or sensors? see $dash_log"
+  fi
+  grep -q "LCD disabled" "$dash_log" && fail "full ./app printed LCD disabled"
+  grep -q "MPU6050 @0x68 WHO_AM_I ok" "$dash_log" || fail "full ./app missing MPU6050 WHO_AM_I banner"
+  grep -q "ADS7830 @0x4b pot=CH2" "$dash_log" || fail "full ./app missing ADS7830 banner"
+  grep -q "Accel\[g\]=" "$dash_log" || fail "full ./app missing MPU6050 samples"
+  grep -q "Pot=" "$dash_log" || fail "full ./app missing ADS7830 samples"
+  pass "full ./app ran ${DASHBOARD_SECS}s with LCD (Pot/ax glyphs still operator)"
+elif [[ "${STRICT_LCD:-0}" == "1" ]]; then
+  fail "skipped full ./app — --test-lcd did not open GPIO"
+else
+  warn "skipped full ./app — --test-lcd did not open GPIO; STRICT_LCD=1 to fail"
+fi
 
 echo "=== Operator checks (manual) ==="
 echo "  0. LED bar first: $APP --test-hc595  (walk Q0-Q7, then bar fill; Ctrl-C)."
@@ -68,7 +91,8 @@ echo "  4. Wire LCD per README, run: $APP --test-lcd"
 echo "     - Expect 'LCD bring-up OK' on line 1 and a counting line 2."
 echo "     - Adjust VO contrast if blank; run WITHOUT sudo if in gpio group."
 echo "  5. Then full dashboard: $APP (no --no-lcd)"
-echo "     - Expect 'I2C/SPI Dashboard' then live Pot/ax lines."
+echo "     - HIL already smoked stdout (Pot=/Accel) when --test-lcd opened GPIO."
+echo "     - Expect splash then live Pot/ax on the glass (16-col rows)."
 
 if [[ "${STRICT_POT:-0}" == "1" ]]; then
   min=$(grep -o 'Pot=[0-9]*' "$log" | sed 's/Pot=//' | sort -n | head -1)
