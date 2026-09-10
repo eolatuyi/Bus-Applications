@@ -1,6 +1,10 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
+
+constexpr std::size_t kLcdCols = 16;
 
 // HD44780 4-bit init nibbles (function-set high nibble 0x3, then 4-bit 0x2).
 constexpr uint8_t kLcdNibble8Bit = 0x03;
@@ -33,4 +37,14 @@ inline uint8_t lcd1602DdramAddr(uint8_t row, uint8_t col) {
 
 inline uint8_t lcd1602SetDdramCommand(uint8_t row, uint8_t col) {
     return static_cast<uint8_t>(kLcdCmdSetDdram | lcd1602DdramAddr(row, col));
+}
+
+// Pad or truncate so a write from column 0 covers the visible 16x2 row.
+inline std::string lcd1602FitLine(std::string s) {
+    if (s.size() > kLcdCols) {
+        s.resize(kLcdCols);
+    } else if (s.size() < kLcdCols) {
+        s.append(kLcdCols - s.size(), ' ');
+    }
+    return s;
 }

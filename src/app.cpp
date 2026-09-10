@@ -31,16 +31,13 @@ void runLcdBringUp() {
             if (!inited) {
                 lcd.init();
                 lcd.clear();
-                lcd.setCursor(0, 0);
-                lcd.print("LCD bring-up OK ");
-                lcd.setCursor(1, 0);
-                lcd.print("GPIO lines live");
+                lcd.printLine(0, "LCD bring-up OK");
+                lcd.printLine(1, "GPIO lines live");
                 inited = true;
             }
-            lcd.setCursor(1, 0);
             char buf[17];
-            std::snprintf(buf, sizeof(buf), "count=%-10d", n);
-            lcd.print(buf);
+            std::snprintf(buf, sizeof(buf), "count=%d", n);
+            lcd.printLine(1, buf);
             std::cout << "LCD bring-up OK count=" << n << std::endl;
             ++n;
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -118,8 +115,7 @@ int main(int argc, char* argv[]) {
             lcd = std::make_unique<LCD1602>();
             lcd->init();
             lcd->clear();
-            lcd->setCursor(0, 0);
-            lcd->print("I2C/SPI Dashboard");
+            lcd->printLine(0, "I2C/SPI Dashboard");
         } else {
             std::cout << "LCD disabled (--no-lcd)\n";
         }
@@ -154,15 +150,12 @@ int main(int argc, char* argv[]) {
                           << " Pot=" << static_cast<int>(pot) << std::endl;
 
                 if (lcd) {
-                    lcd->setCursor(0, 0);
-                    char buf1[17];
-                    std::snprintf(buf1, sizeof(buf1), "Pot:%3d        ",
-                                  static_cast<int>(pot));
-                    lcd->print(buf1);
-                    lcd->setCursor(1, 0);
-                    char buf2[17];
-                    std::snprintf(buf2, sizeof(buf2), "ax:%+1.2fg     ", r.ax_g);
-                    lcd->print(buf2);
+                    char buf1[32];
+                    std::snprintf(buf1, sizeof(buf1), "Pot:%3d", static_cast<int>(pot));
+                    lcd->printLine(0, buf1);
+                    char buf2[32];
+                    std::snprintf(buf2, sizeof(buf2), "ax:%+.2fg", r.ax_g);
+                    lcd->printLine(1, buf2);
                 }
             } catch (const std::exception& ex) {
                 std::cerr << "Sensor error (retrying): " << ex.what() << std::endl;

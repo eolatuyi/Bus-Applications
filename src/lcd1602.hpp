@@ -17,6 +17,7 @@ public:
     void clear();
     void setCursor(uint8_t row, uint8_t col);
     void print(const std::string& s);
+    void printLine(uint8_t row, const std::string& s);
 
 private:
     struct gpiod_chip* chip_;

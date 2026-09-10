@@ -144,3 +144,8 @@ void LCD1602::setCursor(uint8_t row, uint8_t col) {
 void LCD1602::print(const std::string& s) {
     for (char c : s) data(static_cast<uint8_t>(c));
 }
+
+void LCD1602::printLine(uint8_t row, const std::string& s) {
+    setCursor(row, 0);
+    print(lcd1602FitLine(s));
+}

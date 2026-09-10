@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 int main() {
     assert(lcd1602HighNibble(0x28) == 0x02);
@@ -28,6 +29,15 @@ int main() {
         return 1;
     } catch (const std::invalid_argument&) {
     }
+
+    assert(kLcdCols == 16);
+    assert(lcd1602FitLine("") == std::string(16, ' '));
+    assert(lcd1602FitLine("GPIO lines live") == "GPIO lines live ");
+    assert(lcd1602FitLine("LCD bring-up OK ") == "LCD bring-up OK ");
+    assert(lcd1602FitLine("I2C/SPI Dashboard") == "I2C/SPI Dashboar");
+    assert(lcd1602FitLine("Pot:  0") == "Pot:  0         ");
+    assert(lcd1602FitLine("I2C/SPI Dashboard").size() == 16);
+    assert(lcd1602FitLine("Pot:  0").back() == ' ');
 
     std::cout << "lcd1602_protocol_test: OK\n";
     return 0;
