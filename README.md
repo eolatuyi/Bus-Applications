@@ -101,7 +101,7 @@ Open this directory as the Cursor workspace so those rules load.
   - **MPU6050** @ `0x68`: **Verified** — accel/gyro/temp readings sane on hardware (`--no-lcd` run); `init()` checks `WHO_AM_I`.
   - **ADS7830** @ `0x4B` (CH2 pot): **Verified** — `Pot=` tracks knob; HIL smoke + operator confirm.
   - **74HC595** / SPI LED bar: **Verified** — walk/bar via `--test-hc595`; bar tracks pot under `./app --no-lcd`.
-  - **LCD1602** / GPIO: **Verified** — `--test-lcd` bring-up on hardware; line 1 `LCD bring-up OK`, line 2 counting; GPIO 17/27/22–25 claimed by `LCD1602`.
+  - **LCD1602** / GPIO: **Verified** — `--test-lcd` bring-up on hardware; line 1 `LCD bring-up OK`, line 2 counting; GPIO 17/27/22–25 claimed by `LCD1602`. Full `./app` shows live `Pot:` / `ax:` on the panel (rows padded to 16 columns).
 - Unit testing: **In progress** — `ads7830_protocol_test`, `hc595_bar_test`, `mpu6050_protocol_test`, `lcd1602_protocol_test`, `app_cli_test` via `ctest`.
-- System testing / integration: **Partial** — MPU6050 + ADS7830 + 74HC595 + LED bar verified; LCD bring-up verified via `--test-lcd`. Full dashboard (`./app` with live Pot/ax on the panel) still outstanding. HIL on Pi: `i2cdetect`, `--test-hc595`, `--test-lcd`, `--no-lcd` smoke.
+- System testing / integration: **Partial** — MPU6050 + ADS7830 + 74HC595 + LED bar + LCD dashboard verified on hardware (`./app`). HIL on Pi: `i2cdetect`, `--test-hc595`, `--test-lcd`, `--no-lcd` smoke. Arduino UNO still unwired.
 
